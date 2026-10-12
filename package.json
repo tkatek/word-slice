@@ -1,0 +1,14 @@
+{
+  "name": "word-slice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Word Slice — an English-learning fruit-slicing word game (foundation phase).",
+  "scripts": {
+    "start": "node serve.mjs",
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=18.11"
+  }
+}

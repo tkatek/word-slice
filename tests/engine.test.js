@@ -823,7 +823,10 @@ describe('RESULTS session outcomes', () => {
     };
     engine.startSession(lesson);
     engine.launchRound();
-    sliceOption(engine, 'd1'); // hearts 0 → session ends mid-wave
+    // wait until both wave-0 fruits are airborne, then slice the distractor
+    runUntil(engine, () => engine.getFruitsSnapshot().length >= 2, 5);
+    const d1 = engine.getFruitsSnapshot().find((f) => f.optionId === 'd1');
+    engine.slice(d1.x - d1.radius, d1.y, d1.x + d1.radius, d1.y); // hearts 0 → session ends mid-wave
     const outcomes = engine.getOptionOutcomes();
     assert.equal(outcomes.d1, FRUIT_STATES.HIT_WRONG);
     assert.equal(outcomes.c1, FRUIT_STATES.INTERRUPTED);

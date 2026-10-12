@@ -82,7 +82,7 @@ export const TUNING = Object.freeze({
   SPIN_DEG_PER_S: 80,           // max |angular velocity|
 
   // Placeholder appearances (independent of correctness).
-  APPEARANCES: ['apple', 'banana', 'orange', 'grape', 'watermelon', 'pear', 'lemon', 'strawberry'],
+  APPEARANCES: ['watermelon', 'pineapple', 'apple', 'orange', 'strawberry', 'blueberry', 'banana', 'pear', 'lemon', 'kiwi'],
 
   MAX_EVENTS: 64,               // bounded event queue
 });
@@ -497,7 +497,10 @@ export class WordSliceEngine {
     const r = this.round;
     r.waveIndex = index;
     r.waveClearAt = null;
-    const lanes = shuffleCopy(Array.from({ length: this.maxActiveFruits }, (_, i) => i), this.rng);
+    // Lane geometry adapts if maxActiveFruits changed after the waves were
+    // chunked (e.g. a resize happened without round recovery).
+    const laneCount = Math.max(this.maxActiveFruits, r.waves[index].length);
+    const lanes = shuffleCopy(Array.from({ length: laneCount }, (_, i) => i), this.rng);
     r.waves[index].forEach((option, k) => {
       r.pending.push({
         option,
@@ -929,6 +932,7 @@ export class WordSliceEngine {
       maxHearts: this.tuning.STARTING_HEARTS,
       streak: s.streak,
       multiplier: s.multiplier,
+      elapsed: this.simTime,
       wave:
         r && r.launched && r.waves.length > 1 && this.state === ENGINE_STATES.PLAYING
           ? { current: Math.max(1, r.waveIndex + 1), total: r.waves.length }

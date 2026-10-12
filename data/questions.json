@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 1,
+  "lessons": [
+    {
+      "id": "everyday-word-groups",
+      "title": "Everyday Word Groups",
+      "proposedCefrLevel": "A1",
+      "questions": [
+        {
+          "id": "animals-01",
+          "type": "category",
+          "prompt": "Slice the animal words.",
+          "options": [
+            { "id": "cat", "text": "cat" },
+            { "id": "dog", "text": "dog" },
+            { "id": "chair", "text": "chair" },
+            { "id": "book", "text": "book" }
+          ],
+          "correctOptionIds": ["cat", "dog"],
+          "explanation": "Cat and dog are animals. Chair and book are things, not animals."
+        },
+        {
+          "id": "colors-01",
+          "type": "category",
+          "prompt": "Slice the color words.",
+          "options": [
+            { "id": "red", "text": "red" },
+            { "id": "blue", "text": "blue" },
+            { "id": "table", "text": "table" },
+            { "id": "morning", "text": "morning" }
+          ],
+          "correctOptionIds": ["red", "blue"],
+          "explanation": "Red and blue are colors. Table is a thing and morning is a time of day."
+        },
+        {
+          "id": "fruits-01",
+          "type": "category",
+          "prompt": "Slice the fruit words.",
+          "options": [
+            { "id": "apple", "text": "apple" },
+            { "id": "banana", "text": "banana" },
+            { "id": "bread", "text": "bread" },
+            { "id": "water", "text": "water" }
+          ],
+          "correctOptionIds": ["apple", "banana"],
+          "explanation": "Apple and banana are fruits. Bread is food and water is a drink."
+        },
+        {
+          "id": "family-01",
+          "type": "category",
+          "prompt": "Slice the family words.",
+          "options": [
+            { "id": "mother", "text": "mother" },
+            { "id": "father", "text": "father" },
+            { "id": "window", "text": "window" },
+            { "id": "teacher", "text": "teacher" }
+          ],
+          "correctOptionIds": ["mother", "father"],
+          "explanation": "Mother and father are family words. Window is part of a house and teacher is a job."
+        },
+        {
+          "id": "body-01",
+          "type": "category",
+          "prompt": "Slice the body-part words.",
+          "options": [
+            { "id": "hand", "text": "hand" },
+            { "id": "foot", "text": "foot" },
+            { "id": "lamp", "text": "lamp" },
+            { "id": "phone", "text": "phone" }
+          ],
+          "correctOptionIds": ["hand", "foot"],
+          "explanation": "Hand and foot are parts of the body. Lamp and phone are objects."
+        },
+        {
+          "id": "drinks-01",
+          "type": "category",
+          "prompt": "Slice the drink words.",
+          "options": [
+            { "id": "milk", "text": "milk" },
+            { "id": "juice", "text": "juice" },
+            { "id": "bread", "text": "bread" },
+            { "id": "chair", "text": "chair" }
+          ],
+          "correctOptionIds": ["milk", "juice"],
+          "explanation": "Milk and juice are drinks. Bread is food and chair is furniture."
+        },
+        {
+          "id": "clothes-01",
+          "type": "category",
+          "prompt": "Slice the clothes words.",
+          "options": [
+            { "id": "shirt", "text": "shirt" },
+            { "id": "shoe", "text": "shoe" },
+            { "id": "apple", "text": "apple" },
+            { "id": "door", "text": "door" }
+          ],
+          "correctOptionIds": ["shirt", "shoe"],
+          "explanation": "Shirt and shoe are clothes. Apple is a fruit and door is part of a house."
+        },
+        {
+          "id": "transport-01",
+          "type": "category",
+          "prompt": "Slice the transport words.",
+          "options": [
+            { "id": "bus", "text": "bus" },
+            { "id": "train", "text": "train" },
+            { "id": "banana", "text": "banana" },
+            { "id": "house", "text": "house" }
+          ],
+          "correctOptionIds": ["bus", "train"],
+          "explanation": "Bus and train are transport. Banana is a fruit and house is a building."
+        },
+        {
+          "id": "weather-01",
+          "type": "category",
+          "prompt": "Slice the weather words.",
+          "options": [
+            { "id": "rain", "text": "rain" },
+            { "id": "snow", "text": "snow" },
+            { "id": "spoon", "text": "spoon" },
+            { "id": "cat", "text": "cat" }
+          ],
+          "correctOptionIds": ["rain", "snow"],
+          "explanation": "Rain and snow are weather words. Spoon is an object and cat is an animal."
+        },
+        {
+          "id": "animals-02",
+          "type": "category",
+          "prompt": "Slice the animal words.",
+          "options": [
+            { "id": "horse", "text": "horse" },
+            { "id": "bird", "text": "bird" },
+            { "id": "fish", "text": "fish" },
+            { "id": "car", "text": "car" },
+            { "id": "milk", "text": "milk" },
+            { "id": "hat", "text": "hat" }
+          ],
+          "correctOptionIds": ["horse", "bird", "fish"],
+          "explanation": "Horse, bird and fish are animals. Car is transport, milk is a drink and hat is clothes."
+        },
+        {
+          "id": "colors-02",
+          "type": "category",
+          "prompt": "Slice the color words.",
+          "options": [
+            { "id": "green", "text": "green" },
+            { "id": "yellow", "text": "yellow" },
+            { "id": "white", "text": "white" },
+            { "id": "dog", "text": "dog" },
+            { "id": "rain", "text": "rain" },
+            { "id": "book", "text": "book" }
+          ],
+          "correctOptionIds": ["green", "yellow", "white"],
+          "explanation": "Green, yellow and white are colors. Dog is an animal, rain is weather and book is an object."
+        },
+        {
+          "id": "food-01",
+          "type": "category",
+          "prompt": "Slice the food words.",
+          "options": [
+            { "id": "bread", "text": "bread" },
+            { "id": "rice", "text": "rice" },
+            { "id": "egg", "text": "egg" },
+            { "id": "blue", "text": "blue" },
+            { "id": "sister", "text": "sister" },
+            { "id": "train", "text": "train" }
+          ],
+          "correctOptionIds": ["bread", "rice", "egg"],
+          "explanation": "Bread, rice and egg are food. Blue is a color, sister is family and train is transport."
+        },
+        {
+          "id": "house-parts-01",
+          "type": "category",
+          "prompt": "Slice the parts of a house.",
+          "options": [
+            { "id": "window", "text": "window" },
+            { "id": "door", "text": "door" },
+            { "id": "roof", "text": "roof" },
+            { "id": "dog", "text": "dog" },
+            { "id": "apple", "text": "apple" },
+            { "id": "shirt", "text": "shirt" }
+          ],
+          "correctOptionIds": ["window", "door", "roof"],
+          "explanation": "Window, door and roof are parts of a house. Dog is an animal, apple is a fruit and shirt is clothes."
+        },
+        {
+          "id": "school-01",
+          "type": "category",
+          "prompt": "Slice the school words.",
+          "options": [
+            { "id": "pen", "text": "pen" },
+            { "id": "book", "text": "book" },
+            { "id": "bag", "text": "bag" },
+            { "id": "moon", "text": "moon" },
+            { "id": "spoon", "text": "spoon" },
+            { "id": "horse", "text": "horse" }
+          ],
+          "correctOptionIds": ["pen", "book", "bag"],
+          "explanation": "Pen, book and bag are school things. Moon is in the sky, spoon is for eating and horse is an animal."
+        },
+        {
+          "id": "nature-01",
+          "type": "category",
+          "prompt": "Slice the nature words.",
+          "options": [
+            { "id": "tree", "text": "tree" },
+            { "id": "river", "text": "river" },
+            { "id": "sun", "text": "sun" },
+            { "id": "shoe", "text": "shoe" },
+            { "id": "juice", "text": "juice" },
+            { "id": "window", "text": "window" }
+          ],
+          "correctOptionIds": ["tree", "river", "sun"],
+          "explanation": "Tree, river and sun are nature words. Shoe is clothes, juice is a drink and window is part of a house."
+        },
+        {
+          "id": "actions-01",
+          "type": "category",
+          "prompt": "Slice the action words.",
+          "options": [
+            { "id": "run", "text": "run" },
+            { "id": "eat", "text": "eat" },
+            { "id": "sleep", "text": "sleep" },
+            { "id": "red", "text": "red" },
+            { "id": "table", "text": "table" },
+            { "id": "milk", "text": "milk" }
+          ],
+          "correctOptionIds": ["run", "eat", "sleep"],
+          "explanation": "Run, eat and sleep are actions — things you do. Red is a color, table is a thing and milk is a drink."
+        },
+        {
+          "id": "numbers-01",
+          "type": "category",
+          "prompt": "Slice the number words.",
+          "options": [
+            { "id": "three", "text": "three" },
+            { "id": "seven", "text": "seven" },
+            { "id": "ten", "text": "ten" },
+            { "id": "apple", "text": "apple" },
+            { "id": "shirt", "text": "shirt" },
+            { "id": "river", "text": "river" }
+          ],
+          "correctOptionIds": ["three", "seven", "ten"],
+          "explanation": "Three, seven and ten are numbers. Apple is a fruit, shirt is clothes and river is nature."
+        }
+      ]
+    }
+  ]
+}

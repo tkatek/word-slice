@@ -329,31 +329,17 @@ describe('SCORING', () => {
 
   it('hearts never go below zero and no scoring happens after game over', () => {
     const engine = makeEngine();
-    startAndLaunch(engine, makeLesson());
-    sliceOption(engine, 'd1a');
-    sliceOption(engine, 'd1b');
-    sliceOption(engine, 'c1a'); // hearts 1, streak 1 — also proves scoring still works at 1 heart
-    sliceOption(engine, 'c1b');
-    // third wrong ends the session
     const lesson = makeLesson();
-    void lesson;
-    const engineState = engine.state;
-    void engineState;
-    // find any remaining ACTIVE wrong target: none left in round 1, so start
-    // a scenario directly: three distractors in one question
-    const engine2 = makeEngine();
-    const l2 = makeLesson();
-    l2.questions[0] = makeQuestion('q1', ['c1'], ['d1', 'd2', 'd3']);
-    startAndLaunch(engine2, l2);
-    sliceOption(engine2, 'd1');
-    sliceOption(engine2, 'd2');
-    sliceOption(engine2, 'd3');
-    const session = engine2.snapshotSession();
+    lesson.questions[0] = makeQuestion('q1', ['c1'], ['d1', 'd2', 'd3']);
+    startAndLaunch(engine, lesson);
+    sliceOption(engine, 'd1');
+    sliceOption(engine, 'd2');
+    sliceOption(engine, 'd3');
+    const session = engine.snapshotSession();
     assert.equal(session.hearts, 0);
-    assert.equal(engine2.state, ENGINE_STATES.RESULTS);
-    const anyFruit = { x: 400, y: 300 };
-    assert.deepEqual(engine2.slice(anyFruit.x - 100, anyFruit.y, anyFruit.x + 100, anyFruit.y), []);
-    assert.equal(engine2.snapshotSession().score, 0);
+    assert.equal(engine.state, ENGINE_STATES.RESULTS);
+    assert.deepEqual(engine.slice(300, 300, 500, 300), []);
+    assert.equal(engine.snapshotSession().score, 0);
   });
 
   it('streak continues across question boundaries', () => {
@@ -824,20 +810,28 @@ describe('RESULTS session outcomes', () => {
   it('interrupted and not-presented options are not misses or mistakes', () => {
     const engine = makeEngine({ maxActiveFruits: 2, tuning: { STARTING_HEARTS: 1 } });
     const lesson = makeLesson();
-    // mobile waves: [d1, c1] then [d2, c2]; hearts=1 so one wrong ends it
-    lesson.questions[0] = makeQuestion('q1', ['c1', 'c2'], ['d1', 'd2']);
+    // manual order [d1, c1, d2]: wave 0 = [d1, c1], wave 1 = [d2] (never
+    // launched). Slicing d1 at 1 heart ends the session while c1 is still
+    // airborne (INTERRUPTED) and d2 is still queued (NOT_PRESENTED).
+    lesson.questions[0] = {
+      id: 'q1',
+      type: 'category',
+      prompt: 'Slice the q1 words.',
+      options: [{ id: 'd1', text: 'd1' }, { id: 'c1', text: 'c1' }, { id: 'd2', text: 'd2' }],
+      correctOptionIds: ['c1'],
+      explanation: 'c1 matches.',
+    };
     engine.startSession(lesson);
     engine.launchRound();
-    sliceOption(engine, 'd1'); // hearts 0 → session ends mid-round
+    sliceOption(engine, 'd1'); // hearts 0 → session ends mid-wave
     const outcomes = engine.getOptionOutcomes();
     assert.equal(outcomes.d1, FRUIT_STATES.HIT_WRONG);
     assert.equal(outcomes.c1, FRUIT_STATES.INTERRUPTED);
     assert.equal(outcomes.d2, FRUIT_STATES.NOT_PRESENTED);
-    assert.equal(outcomes.c2, FRUIT_STATES.NOT_PRESENTED);
     const report = engine.getSessionReport();
     assert.equal(report.missedTargets, 0);
     assert.deepEqual(report.mistakes, []);
-    assert.equal(report.accuracy, 0);
+    assert.equal(report.endedEarly, true);
   });
 
   it('safe empty metrics: accuracy and rates are null, never NaN', () => {

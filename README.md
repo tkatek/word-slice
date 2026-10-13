@@ -37,8 +37,9 @@ randomness and simulated time.
 - **Desktop**: hold the primary mouse button and drag across a fruit to slice it.
 - **Mobile**: touch and swipe.
 - Only moves count — a stationary pointer never slices.
-- **Pause** button (or switching tabs) freezes the game; resume deliberately via the
-  Resume button. Switching back to the tab never auto-resumes.
+- **Pause** button (or switching tabs) freezes the game; the whole scene turns
+  black-and-white and blurs behind a single centered Play button. Switching back
+  to the tab never auto-resumes.
 - `touch-action: none` is applied only to the playfield, so page scrolling still works
   on menus, feedback, and results screens.
 
@@ -114,9 +115,17 @@ the top of the corresponding sections in `js/game.js`.
   handling (single active pointer, coordinate conversion), one animation loop,
   rendering, feedback/results screens, pause/visibility, resize recovery, and guarded
   local progress storage. Never infers game state from the DOM.
+- `js/audio.js` — central audio manager (see **Audio** below): one lazily created
+  Web Audio context, a manifest mapping game events to sound files with per-event
+  gain/cooldown/priority/bus, cached decoding, cooldowns, a voice cap with priority
+  stealing, a master compressor, and versioned audio settings in localStorage.
+  Missing files, unsupported Web Audio and storage failures degrade to silence —
+  never to errors.
 - `css/game.css` — responsive layouts, placeholder fruits (CSS shapes + real text
   labels), overlays, restrained feedback, reduced-motion support.
 - `tests/engine.test.js` — 53 tests / 13 suites (see above).
+  `tests/audio.test.js` — 23 tests / 3 suites (settings store, manifest integrity,
+  manager behavior with an injected fake AudioContext).
 - `serve.mjs` — minimal zero-dependency static dev server.
 
 Notable behaviors:
@@ -212,10 +221,85 @@ Notable behaviors:
 - `tools/prep-fruits.mjs` regenerates the sprite set from the raw generated
   PNGs (trims margins, clamps near-opaque alpha, downsamples to ≤ 480 px).
 
+## Audio
+
+All 29 sound effects are **original, procedurally synthesized** by
+`tools/make-audio.mjs` (deterministic, seeded — re-running it produces identical
+files). No third-party samples are used, so there are no attribution
+requirements. Format: 16-bit mono PCM **WAV at 22.05 kHz** (~650 KB total) —
+this environment has no OGG encoder, so the manifest honestly references
+`.wav`; nothing is mislabeled.
+
+Regenerate/validate the assets:
+
+```bash
+node tools/make-audio.mjs          # render + validate all files
+node tools/make-audio.mjs --check  # validate existing files only
+```
+
+Layout under `assets/audio/`: `slicing/` (3 blade whooshes + 3 juicy fruit
+cuts), `feedback/` (correct, incorrect, heart-lost, fruit-missed, combo-2/3/
+high), `progression/` (countdown tick, round intro/start/success/failed, level
+win/failed/unlocked, star-earned, three-stars, achievement) and `ui/`
+(button click/hover, menu-open, pause, resume).
+
+### How it plays
+
+`js/audio.js` owns every sound (one `audioManager` singleton; the browser layer
+never creates `Audio` elements or audio nodes). Sounds are mapped in the
+`AUDIO_MANIFEST` — per event: file pool, mix gain, cooldown, priority, bus
+(`gameplay` vs `ui`), and pitch-variation range. Files are fetched once,
+decoded once, cached, and reused; each play picks a variation and a small
+bounded pitch offset so repeated slices never sound identical.
+
+Event wiring (all driven by **real engine events** — never by fruit art or
+DOM guesswork):
+
+| Event | Sound(s) |
+| --- | --- |
+| Meaningful swipe begins (first qualifying move per gesture + cooldown) | `bladeWhoosh` |
+| Any successful fruit collision (`correctSlice`/`wrongSlice`) | `fruitCut` |
+| Correct answer | `correct` (+ combo cues by real streak: 2 → `combo2`, 3–4 → `combo3`, every 5th → `comboHigh`) |
+| Wrong answer | `incorrect` + quieter `heartLost` |
+| A correct target falls un-sliced | soft `fruitMissed` (avoided distractors stay **silent**) |
+| Question card appears / each countdown second / fruits launch | `roundIntro` / `countdownTick` / `roundStart` |
+| Round feedback card | `roundSuccess` or `roundFailed` (from `report.successful`) |
+| Results | sequenced celebration: `levelWin`/`levelFailed` → stars (`starEarned`/`threeStars`) → `levelUnlocked` (only when genuinely newly unlocked) → `achievement` per new achievement — spaced, never stacked |
+| Buttons (all, incl. live-built level cards; keyboard too) | `buttonClick` |
+| Pointer hover on buttons (precise pointers only, rate-limited) | `buttonHover` |
+| Overlays open / pause / resume | `menuOpen` / `pause` / `resume` |
+
+### Autoplay policy, pause and performance
+
+- The `AudioContext` is created/resumed **only from real user gestures**
+  (capture-phase `pointerdown`/`keydown`; the listeners detach once running).
+  Before that the game plays silently — no rejected-promise spam. Essential
+  files are *fetched* at load but only *decoded* after unlock.
+- Pausing (button, tab hidden, overlay) suspends the **gameplay bus**: no
+  slice/combo/countdown sounds fire while paused, pending sequenced items are
+  cancelled, nothing replays on resume. UI sounds stay audible on pause
+  screens. Short in-flight effects finish naturally.
+- Mixing safety: per-event cooldowns, a 14-voice cap with priority-based
+  stealing (a quiet hover is dropped before a slice is), and a master
+  `DynamicsCompressor` so stacked rapid slices cannot clip. Ended voices
+  disconnect their nodes.
+
+### Settings
+
+Settings → **Sound effects On/Off** and **Effects volume 0–100 %**, persisted
+in a dedicated versioned record (`word-slice:v1:audio`) separate from progress
+and achievements (`word-slice:v2:progress`) — audio changes never touch level
+data. Mute applies instantly. Defaults: on, 80 %. Background music is
+intentionally not shipped (no suitable original track); no fake music
+controls exist.
+
+`window.wordSliceAudio` exposes the manager (stats/mute/volume) for
+debugging and automated verification.
+
 ## Intentionally deferred
 
-- Sound effects (the Settings toggle is visibly disabled and labeled as
-  such) and further art polish of the generated backgrounds/sprites.
+- Background music (no suitable original track; no fake music controls) and
+  further art polish of the generated backgrounds/sprites.
 - Power-ups (removed from the gameplay HUD rather than faked), coins, and
   any meta-game systems. If assisted-answer power-ups arrive later, they
   must not count toward learning mastery.

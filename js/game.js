@@ -20,7 +20,6 @@ import {
   STAGES,
   levelsByStage,
   levelById,
-  stageById,
   nextLevel,
   tuningOverridesFor,
   starsFor,
@@ -37,6 +36,11 @@ import {
   passedLevelCount,
   recordLevelResult,
 } from './progress.js';
+import {
+  RoundIntroScheduler,
+  INTRO_STATES,
+} from './round-intro.js';
+import { audioManager } from './audio.js';
 
 /* ------------------------------------------------------------------ */
 /* DOM references                                                      */
@@ -53,6 +57,9 @@ const screens = {
   feedback: $('screen-feedback'),
   results: $('screen-results'),
 };
+
+/** #app carries the cinematic pause class (scene grayscale + blur). */
+const appRoot = $('app');
 
 const els = {
   errorText: $('error-text'),
@@ -77,6 +84,9 @@ const els = {
   settingsOverlay: $('settings-overlay'),
   btnSettingsClose: $('btn-settings-close'),
   btnSettingsHow: $('btn-settings-how'),
+  btnSoundToggle: $('btn-sound-toggle'),
+  rangeEffectsVolume: $('range-effects-volume'),
+  volumeValue: $('volume-value'),
   btnResetBest: $('btn-reset-best'),
   achievementsList: $('achievements-list'),
   tutorialOverlay: $('tutorial-overlay'),
@@ -84,16 +94,25 @@ const els = {
   btnTutorialSkip: $('btn-tutorial-skip'),
   btnTutorialNext: $('btn-tutorial-next'),
   gameToast: $('game-toast'),
-  hudQuestion: $('hud-question'),
+  hudLevelValue: $('hud-level-value'),
+  hudRoundValue: $('hud-round-value'),
+  hudProgressTrack: $('hud-progress-track'),
   hudProgressFill: $('hud-progress-fill'),
-  hudLessonSub: $('hud-lesson-sub'),
+  hudScore: $('hud-score'),
   hudScoreValue: $('hud-score-value'),
+  hudCombo: $('hud-combo'),
+  hudComboValue: $('hud-combo-value'),
   hudHearts: $('hud-hearts'),
   hudTimerValue: $('hud-timer-value'),
-  panelScore: $('panel-score'),
-  panelStreak: $('panel-streak'),
-  panelBest: $('panel-best'),
   btnPause: $('btn-pause'),
+  questionCard: $('question-card'),
+  qcBody: document.querySelector('#question-card .qc-body'),
+  bannerSlotCard: $('banner-slot-card'),
+  qcMeta: $('qc-meta'),
+  qcInstruction: $('qc-instruction'),
+  qcCountdown: $('qc-countdown'),
+  qcCountdownLabel: $('qc-countdown-label'),
+  qcCountdownFill: $('qc-countdown-fill'),
   questionPrompt: $('question-prompt'),
   questionWave: $('question-wave'),
   playfield: $('playfield'),
@@ -101,25 +120,17 @@ const els = {
   trailSvg: $('trail'),
   trailLine: $('trail-line'),
   trailGlow: $('trail-glow'),
-  readyOverlay: $('ready-overlay'),
-  readyProgress: $('ready-progress'),
-  readyPrompt: $('ready-prompt'),
-  readyWaves: $('ready-waves'),
-  btnLaunch: $('btn-launch'),
   resizeNotice: $('resize-notice'),
   pauseOverlay: $('pause-overlay'),
   btnResume: $('btn-resume'),
-  btnRestart: $('btn-restart'),
-  btnQuit: $('btn-quit'),
-  pwHelp: $('pw-help'),
-  pwSettings: $('pw-settings'),
   fbProgress: $('fb-progress'),
   fbTitle: $('fb-title'),
+  fbResultIcon: $('fb-result-icon'),
   fbPrompt: $('fb-prompt'),
   fbCorrect: $('fb-correct'),
   fbWrong: $('fb-wrong'),
-  fbMissed: $('fb-missed'),
   fbExplanation: $('fb-explanation'),
+  fbFrame: document.querySelector('#screen-feedback .fb-frame'),
   btnContinue: $('btn-continue'),
   rsTitle: $('rs-title'),
   rsStars: $('rs-stars'),
@@ -190,6 +201,10 @@ function setScreen(name) {
   for (const [key, section] of Object.entries(screens)) {
     section.hidden = key !== name;
   }
+  // The question card lives at the #app level (a filtered #screen-game must
+  // not re-anchor its fixed positioning), so its visibility follows the
+  // game screen explicitly.
+  els.questionCard.hidden = name !== 'game';
   appState = ['game', 'feedback', 'results'].includes(name) ? 'GAME' : name.toUpperCase();
 }
 
@@ -228,7 +243,9 @@ function openAppOverlay(overlayEl) {
   // Keep an existing overlay-owned pause (settings → how-to stacking).
   if (!overlayPausedByUs && engine && (engine.state === ENGINE_STATES.PLAYING || engine.state === ENGINE_STATES.ROUND_READY)) {
     overlayPausedByUs = engine.pause('overlay');
+    if (overlayPausedByUs) audioManager.setSuspended(true); // no gameplay audio under overlays
   }
+  audioManager.play('menuOpen');
   clearGesture();
   clearTransientFx();
   refreshView();
@@ -240,6 +257,7 @@ function closeAppOverlay(overlayEl) {
     engine.resume();
   }
   overlayPausedByUs = false;
+  audioManager.setSuspended(false); // safe either way: results/menus never suspend
   processEngineEvents();
   refreshView();
 }
@@ -279,7 +297,7 @@ async function loadLevelPack() {
         levelQuestions.set(level.id, level.questions);
       }
     }
-    renderMenu();
+    autoStartSession(); // straight into gameplay — the menu is not shown
   } catch (err) {
     if (attempt !== loadAttempt) return;
     levelQuestions = null;
@@ -302,6 +320,41 @@ function lessonFor(level) {
 /* Menu + level select                                                 */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Automatic startup                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Level chosen for the automatic session: the first unlocked, not-yet-
+ * passed level; when everything is passed, the most recently played
+ * level (falling back to level 1). Saved progress is never reset.
+ */
+function autoLevelChoice() {
+  if (passedLevelCount(progress) >= LEVELS.length) {
+    let best = null;
+    let bestAt = -1;
+    for (const level of LEVELS) {
+      const at = Date.parse(progress.levels[level.id]?.last?.at || '');
+      if (Number.isFinite(at) && at > bestAt) {
+        bestAt = at;
+        best = level;
+      }
+    }
+    return best || LEVELS[0];
+  }
+  return continueTarget(progress);
+}
+
+/** Startup entry point after the data pack loads: play immediately. */
+function autoStartSession() {
+  if (!levelQuestions) {
+    els.errorText.textContent = 'No levels available.';
+    setScreen('error');
+    return;
+  }
+  startGame(autoLevelChoice());
+}
+
 function renderMenu() {
   if (!levelQuestions) {
     els.errorText.textContent = 'No levels available.';
@@ -317,10 +370,21 @@ function renderMenu() {
   setScreen('menu');
 }
 
-function starRow(bestStars) {
+/* Icon paths shared by the level map (stars, play triangle, padlock). */
+const STAR_ICON_PATH = 'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
+const PLAY_ICON_PATH = 'M8.6 5.2c0-1 1.1-1.6 1.9-1.1l9.6 5.9c.8.5.8 1.7 0 2.2l-9.6 5.9c-.8.5-1.9-.1-1.9-1.1V5.2z';
+const LOCK_ICON_PATH = 'M12 2a5 5 0 0 0-5 5v3H6.5A2.5 2.5 0 0 0 4 12.5v6A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-6A2.5 2.5 0 0 0 17.5 10H17V7a5 5 0 0 0-5-5zm3 8H9V7a3 3 0 0 1 6 0v3z';
+
+function icon(kind, cls) {
+  const paths = { star: STAR_ICON_PATH, play: PLAY_ICON_PATH, lock: LOCK_ICON_PATH };
+  return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${paths[kind]}"/></svg>`;
+}
+
+/** Three-star row for a level card: gold-filled earned, outlined rest. */
+function starIcons(bestStars) {
   let out = '';
   for (let i = 0; i < 3; i++) {
-    out += i < bestStars ? '⭐' : '<span class="star-off">⭐</span>';
+    out += icon('star', `star${i < bestStars ? ' is-earned' : ''}`);
   }
   return out;
 }
@@ -328,25 +392,30 @@ function starRow(bestStars) {
 function renderLevels() {
   if (!levelQuestions) return;
   const target = continueTarget(progress);
-  els.levelsProgress.textContent = `${passedLevelCount(progress)}/${LEVELS.length} passed · ${totalStars(progress)} stars`;
+  els.levelsProgress.textContent =
+    `${passedLevelCount(progress)}/${LEVELS.length} levels passed · ${totalStars(progress)}/${LEVELS.length * 3} stars`;
   els.levelsList.replaceChildren();
 
   for (const { stage, levels } of levelsByStage()) {
     const block = document.createElement('div');
     block.className = 'stage-block';
+    block.dataset.stageId = stage.id; // CSS colors the banner per stage
 
-    const header = document.createElement('div');
-    header.className = 'stage-header';
-    const name = document.createElement('span');
+    const banner = document.createElement('header');
+    banner.className = 'stage-banner';
+    const heading = document.createElement('div');
+    heading.className = 'stage-heading';
+    const name = document.createElement('h2');
     name.className = 'stage-name';
     name.textContent = stage.name;
     const cefr = document.createElement('span');
     cefr.className = 'stage-cefr';
     cefr.textContent = stage.cefr;
-    const desc = document.createElement('span');
+    heading.append(name, cefr);
+    const desc = document.createElement('p');
     desc.className = 'stage-desc';
     desc.textContent = stage.description;
-    header.append(name, cefr, desc);
+    banner.append(heading, desc);
 
     const grid = document.createElement('div');
     grid.className = 'stage-grid';
@@ -355,16 +424,27 @@ function renderLevels() {
       const rec = progress.levels[level.id];
       const unlocked = isLevelUnlocked(progress, level.id);
       const passed = Boolean(rec && rec.passed);
+      const bestStars = rec ? rec.bestStars || 0 : 0;
+      // The recommended next challenge: the continue target, unless it is
+      // already behind the player (every level passed → no Next badge).
+      const isNext = level.id === target.id && !passed;
 
-      const card = document.createElement('div');
-      card.className = 'level-card' + (unlocked ? '' : ' is-locked') + (level.id === target.id ? ' is-next' : '');
+      const card = document.createElement('article');
+      card.className = 'level-card' + (isNext ? ' is-next' : '') + (unlocked ? '' : ' is-locked');
+
+      if (isNext) {
+        const badge = document.createElement('span');
+        badge.className = 'level-badge-next';
+        badge.textContent = 'Next';
+        card.append(badge);
+      }
 
       const top = document.createElement('div');
       top.className = 'level-top';
       const num = document.createElement('span');
       num.className = 'level-number';
       num.textContent = String(level.order);
-      const title = document.createElement('span');
+      const title = document.createElement('h3');
       title.className = 'level-title';
       title.textContent = level.title;
       top.append(num, title);
@@ -375,37 +455,32 @@ function renderLevels() {
 
       const starsEl = document.createElement('div');
       starsEl.className = 'level-stars';
-      starsEl.innerHTML = starRow(rec ? rec.bestStars : 0);
+      starsEl.setAttribute('role', 'img');
+      starsEl.setAttribute('aria-label', `${bestStars} of 3 stars`);
+      starsEl.innerHTML = starIcons(bestStars);
 
       card.append(top, topic, starsEl);
 
       if (unlocked) {
-        const best = document.createElement('div');
+        const best = document.createElement('p');
         best.className = 'level-best';
         best.textContent = rec && rec.bestScore > 0 ? `Best score: ${rec.bestScore}` : 'Not played yet';
-        card.append(best);
         const play = document.createElement('button');
         play.type = 'button';
         play.className = 'level-play';
-        play.textContent = passed ? 'Play again' : 'Play';
+        play.innerHTML = `${icon('play', 'level-play-icon')}<span>${passed ? 'Play again' : 'Play'}</span>`;
         play.setAttribute('aria-label', `Play level ${level.order}: ${level.title}`);
         play.addEventListener('click', () => beginLevel(level));
-        card.append(play);
-        if (level.id === target.id) {
-          const badge = document.createElement('span');
-          badge.className = 'level-badge-next';
-          badge.textContent = 'Next';
-          card.append(badge);
-        }
+        card.append(best, play);
       } else {
-        const lock = document.createElement('div');
+        const lock = document.createElement('p');
         lock.className = 'level-lock';
-        lock.textContent = '🔒 Pass the previous level to unlock';
+        lock.innerHTML = `${icon('lock', 'level-lock-icon')}<span>Pass the previous level to unlock</span>`;
         card.append(lock);
       }
       grid.append(card);
     }
-    block.append(header, grid);
+    block.append(banner, grid);
     els.levelsList.append(block);
   }
   setScreen('levels');
@@ -490,6 +565,11 @@ function renderTutorialStep() {
         tutorialPracticeDone = true;
         img.src = step.cutImg; // the same cut artwork used in gameplay
         blade.remove();
+        // Same layered feedback as a real slice: whoosh, instant cut, then
+        // the correctness cue slightly behind the cutting transient.
+        audioManager.play('bladeWhoosh');
+        audioManager.play('fruitCut');
+        audioManager.playSequence([{ event: 'correct', delayMs: 80 }]);
         const hint = document.createElement('p');
         hint.className = 'tutorial-hint';
         hint.textContent = 'Nice slice! Tap Next.';
@@ -525,11 +605,18 @@ function renderTutorialStep() {
   els.tutorialSteps.append(view);
 }
 
+/**
+ * Opens the interactive tutorial. `pendingLevel` starts that level when
+ * the walkthrough finishes; null just returns to the current screen.
+ * (The overlay and flow stay available to future entry points — the old
+ * pause-menu entry was removed with the cinematic pause redesign.)
+ */
 function openTutorial(pendingLevel) {
   tutorialPendingLevel = pendingLevel;
   tutorialIndex = 0;
   renderTutorialStep();
   els.tutorialOverlay.hidden = false;
+  audioManager.play('menuOpen');
 }
 
 function finishTutorial() {
@@ -541,6 +628,7 @@ function finishTutorial() {
   const level = tutorialPendingLevel;
   tutorialPendingLevel = null;
   if (level) startGame(level);
+  else refreshView();
 }
 
 /* ------------------------------------------------------------------ */
@@ -600,8 +688,207 @@ function tick(timestamp) {
   if (engine && engine.state === ENGINE_STATES.PLAYING) {
     engine.update(dt); // engine clamps/bounds internally
   }
+  stepIntro(dt);
   processEngineEvents();
   renderFrame();
+}
+
+/* ------------------------------------------------------------------ */
+/* Round introduction: centered question card → 4s countdown → the     */
+/* same card flies to its top slot → the round launches automatically  */
+/*                                                                     */
+/* Presentation only — the engine stays the source of truth. Timing    */
+/* comes from RoundIntroScheduler driven by the single rAF loop, so    */
+/* pausing, hiding the tab, restarting or leaving the level freezes or */
+/* cancels the countdown and can never double-launch a round.          */
+/* ------------------------------------------------------------------ */
+
+const prefersReducedMotion = Boolean(
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+);
+
+const intro = new RoundIntroScheduler({
+  flightMs: prefersReducedMotion ? 0 : 520,
+});
+
+/** Whole second last heard from the countdown (audio ticks on change). */
+let lastCountdownSecond = -1;
+
+function appOverlayOpen() {
+  return !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden || !els.tutorialOverlay.hidden;
+}
+
+/** Countdown/flight may only advance on visible, unpaused gameplay. */
+function introActive() {
+  return Boolean(engine)
+    && engine.state === ENGINE_STATES.ROUND_READY
+    && !document.hidden
+    && !screens.game.hidden
+    && !appOverlayOpen();
+}
+
+/** Places the card's visual center at (cx, cy) with the given scale.
+    Transform-origin is the top-left corner, so a later height change
+    (intro → banner) never shifts the parked position. */
+function placeCard(cx, cy, scale) {
+  const w = els.questionCard.offsetWidth;
+  const h = els.questionCard.offsetHeight;
+  els.questionCard.style.transform =
+    `translate(${Math.round(cx - (scale * w) / 2)}px, ${Math.round(cy - (scale * h) / 2)}px) scale(${scale})`;
+}
+
+/** Centers the card in the playable area (below the HUD), scaled up a
+    notch for readability but never wider than the viewport. */
+function centerCardInPlayfield() {
+  const rect = els.playfield.getBoundingClientRect();
+  const cardW = els.questionCard.offsetWidth;
+  const maxScale = (window.innerWidth * 0.94) / cardW;
+  const scale = Math.min(1.3, Math.max(1, maxScale));
+  placeCard(rect.left + rect.width / 2, rect.top + rect.height / 2, scale);
+}
+
+/** Parks the card exactly over its reserved top slot: the flight lands
+    the card's top-left corner on the slot's corner, so the shrinking
+    height settles into the final banner box precisely. */
+function parkCardAtSlot() {
+  const rect = els.bannerSlotCard.getBoundingClientRect();
+  els.questionCard.style.transform = `translate(${Math.round(rect.left)}px, ${Math.round(rect.top)}px) scale(1)`;
+}
+
+/* Keeps the compact banner tall enough for questions that wrap: the base
+   --qc-compact-h holds one prompt line plus the wave line, and any extra
+   wrapped lines grow the live card and its reserved slot in lock step
+   (both derive their height from --qc-extra). Text is never shrunk or
+   truncated. Presentation only — scoring/physics are untouched. */
+let lastCompactFitKey = '';
+
+function fitCompactQuestion(force = false) {
+  const card = els.questionCard;
+  // Only the settled compact banner is measured: mid-flight boxes are
+  // still animating, and the intro card sizes itself from its artwork.
+  if (card.hidden || card.classList.contains('is-intro') || card.classList.contains('is-flying')) return;
+  const key = `${els.questionPrompt.textContent}|${els.questionWave.textContent}|${window.innerWidth}`;
+  if (!force && key === lastCompactFitKey) return;
+  lastCompactFitKey = key;
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--qc-extra', '0px'); // measure against the base height
+  const gap = parseFloat(getComputedStyle(els.qcBody).rowGap) || 0;
+  const needed = els.questionPrompt.offsetHeight + els.questionWave.offsetHeight + gap;
+  const available = els.qcBody.clientHeight; // forces layout at extra = 0
+  const extra = Math.max(0, Math.ceil((needed - available) / 2) * 2);
+  rootStyle.setProperty('--qc-extra', `${extra}px`);
+}
+
+function updateCountdownDom() {
+  const seconds = Math.max(1, intro.remainingSeconds);
+  els.qcCountdownLabel.textContent = `${seconds}`;
+  // The amber bar starts full and drains to zero across the intro; the
+  // unrounded percentage keeps the per-frame drain sub-pixel smooth.
+  els.qcCountdownFill.style.width = `${((1 - intro.progress) * 100).toFixed(2)}%`;
+  els.qcCountdown.setAttribute('aria-label', `Question starts in ${intro.remainingSeconds} seconds`);
+}
+
+/** Instruction line adapted to the active question's type. */
+const INTRO_INSTRUCTIONS = {
+  category: 'Slice only the matching words!',
+  'grammar-identify': 'Slice the word that answers the question!',
+  'sentence-completion': 'Slice the word that completes the sentence!',
+  'word-meaning': 'Slice the word that matches the meaning!',
+};
+
+function introInstructionFor(prompt) {
+  // The engine shuffles the lesson's questions, so match by prompt text
+  // against the validated pack and fall back to the generic instruction.
+  const questions = levelQuestions && currentLevel ? levelQuestions.get(currentLevel.id) : null;
+  const question = questions && questions.find((item) => item.prompt === prompt);
+  return (question && INTRO_INSTRUCTIONS[question.type]) || INTRO_INSTRUCTIONS.category;
+}
+
+/** Starts the introduction for the prepared round (from refreshView). */
+function beginRoundIntro() {
+  if (!engine || intro.state !== INTRO_STATES.IDLE) return;
+  const hud = engine.getHudState();
+  if (!hud.prompt) return;
+  intro.begin();
+  lastCountdownSecond = intro.remainingSeconds; // the first tick fires at 3
+  audioManager.play('roundIntro');
+  els.qcMeta.textContent = `LEVEL ${currentLevel ? currentLevel.order : 1} · ROUND ${hud.questionNumber}/${hud.questionTotal}`;
+  els.qcInstruction.textContent = introInstructionFor(hud.prompt);
+  els.questionWave.textContent = ''; // no stale wave line during the intro
+  lastCompactFitKey = ''; // the next compact landing re-measures the wrap
+  document.documentElement.style.setProperty('--qc-extra', '0px');
+  els.questionCard.style.height = ''; // intro height comes from the artwork's aspect
+  els.questionCard.classList.remove('is-flying');
+  els.questionCard.classList.add('is-intro');
+  screens.game.classList.add('is-intro');
+  updateCountdownDom();
+  centerCardInPlayfield(); // snap (no transition while holding)
+}
+
+/** Countdown finished: the same card flies from center to its slot. */
+function startFlight() {
+  const card = els.questionCard;
+  // Lock the current intro height, then retarget the slot height so the
+  // artwork card shrinks smoothly instead of snapping to banner size.
+  card.style.height = `${card.offsetHeight}px`;
+  void card.offsetWidth; // flush the locked height before retargeting
+  card.classList.add('is-flying'); // enables transform + height transitions
+  card.classList.remove('is-intro');
+  screens.game.classList.remove('is-intro');
+  card.style.height = `${Math.round(els.bannerSlotCard.getBoundingClientRect().height)}px`;
+  parkCardAtSlot();
+  if (prefersReducedMotion) {
+    intro.settle();
+    attemptIntroLaunch();
+  }
+}
+
+/** Post-flight card state (wave preview line, no transition locks). */
+function finishFlight() {
+  els.questionCard.classList.remove('is-flying');
+  els.questionCard.style.height = ''; // banner height takes over (same value)
+  // Pre-launch wave preview; renderHud keeps it live once fruits fly.
+  const waves = engine ? Math.ceil(Object.keys(engine.getOptionOutcomes() || {}).length / engine.maxActiveFruits) : 0;
+  els.questionWave.textContent = waves > 1 ? `Wave 1 of ${waves}` : '';
+  fitCompactQuestion(true); // grow for wrapped prompts before fruits launch
+}
+
+/** Launches the round through the existing engine API — exactly once. */
+function attemptIntroLaunch() {
+  if (intro.state !== INTRO_STATES.AWAIT_LAUNCH) return;
+  finishFlight();
+  if (intro.tryLaunch(introActive()) === 'launch') {
+    if (!engine || engine.state !== ENGINE_STATES.ROUND_READY) return; // extra safety
+    els.resizeNotice.hidden = true;
+    engine.launchRound();
+    audioManager.play('roundStart'); // presentation only — never drives the launch
+    clearGesture(); // rebase pointer history at round start
+    processEngineEvents();
+  }
+}
+
+/** Cancels a running introduction (restart, level change, quit). */
+function cancelIntro() {
+  intro.cancel();
+  els.questionCard.classList.remove('is-intro', 'is-flying');
+  screens.game.classList.remove('is-intro');
+}
+
+/** Drives the scheduler from the single animation loop. */
+function stepIntro(dtSeconds) {
+  if (intro.state === INTRO_STATES.IDLE) return;
+  const action = intro.step(Math.max(0, dtSeconds) * 1000, introActive());
+  if (intro.state === INTRO_STATES.HOLD) {
+    updateCountdownDom();
+    centerCardInPlayfield(); // track the center across viewport changes
+    const second = intro.remainingSeconds;
+    if (second !== lastCountdownSecond) {
+      lastCountdownSecond = second;
+      audioManager.play('countdownTick'); // subtle: never louder than reading
+    }
+  }
+  if (action === 'fly') startFlight();
+  else if (action === 'settled') attemptIntroLaunch();
 }
 
 /* ------------------------------------------------------------------ */
@@ -872,26 +1159,68 @@ function formatTime(totalSeconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/* Hearts are drawn as outlined SVG icons so they stay big, crisp and
+   color-stable on every platform (emoji/text hearts render too small).
+   Full hearts use the shared #hud-heart-shine gradient for a glossy
+   candy look; lost hearts keep their slot as dark hollows. */
+const HEART_ICON_PATH =
+  'M16 28.2C7.9 21.6 2.6 16.4 2.6 10.3 2.6 5.6 6.2 2.2 10.5 2.2c2.4 0 4.4 1.2 5.5 3 1.1-1.8 3.1-3 5.5-3 4.3 0 7.9 3.4 7.9 8.1 0 6.1-5.3 11.3-13.4 17.9Z';
+
+function heartIcon(full) {
+  if (!full) {
+    return `<svg class="heart empty" viewBox="0 0 32 30" aria-hidden="true" focusable="false"><path d="${HEART_ICON_PATH}" fill="rgba(8,20,34,0.5)" stroke="rgba(213,225,232,0.42)"/></svg>`;
+  }
+  return `<svg class="heart" viewBox="0 0 32 30" aria-hidden="true" focusable="false"><path d="${HEART_ICON_PATH}" fill="url(#hud-heart-shine)" stroke="#ffd9df"/><ellipse cx="10.6" cy="9.2" rx="3.8" ry="2.3" fill="rgba(255,255,255,0.8)" transform="rotate(-28 10.6 9.2)"/></svg>`;
+}
+
+/** Hearts markup is only rebuilt when the count actually changes. */
+let lastHeartsKey = '';
+
+/** Restart a one-shot CSS animation class (score pop, combo flare). */
+function retriggerAnimation(el, className) {
+  el.classList.remove(className);
+  void el.offsetWidth; // restart the animation
+  el.classList.add(className);
+}
+
+let lastScore = -1;
+let lastMultiplier = -1;
+
 function renderHud() {
   if (!engine) return;
   const hud = engine.getHudState();
-  els.hudQuestion.textContent = `Round ${hud.questionNumber}/${hud.questionTotal}`;
-  els.hudProgressFill.style.width = `${Math.round((hud.questionNumber / hud.questionTotal) * 100)}%`;
-  els.hudScoreValue.textContent = `${hud.score}`;
-  els.hudTimerValue.textContent = formatTime(hud.elapsed);
-  const hearts = [];
-  for (let i = 0; i < hud.maxHearts; i++) {
-    const className = i < hud.hearts ? 'heart' : 'heart empty';
-    hearts.push(`<span class="${className}" aria-hidden="true">♥</span>`);
+  if (currentLevel) els.hudLevelValue.textContent = String(currentLevel.order);
+  els.hudRoundValue.textContent = `${hud.questionNumber}/${hud.questionTotal}`;
+  const lessonPercent = hud.questionTotal > 0
+    ? Math.round((hud.questionNumber / hud.questionTotal) * 100)
+    : 0;
+  els.hudProgressFill.style.width = `${lessonPercent}%`;
+  els.hudProgressTrack.setAttribute('aria-valuenow', String(lessonPercent));
+  if (hud.score !== lastScore) {
+    els.hudScoreValue.textContent = `${hud.score}`;
+    if (lastScore >= 0 && hud.score > lastScore) retriggerAnimation(els.hudScore, 'is-bumped');
+    lastScore = hud.score;
   }
-  els.hudHearts.innerHTML = hearts.join('');
-  els.hudHearts.setAttribute('aria-label', `Hearts ${hud.hearts} of ${hud.maxHearts}`);
-  els.panelScore.textContent = `${hud.score}`;
-  els.panelStreak.textContent = hud.streak > 0 ? `${hud.streak} ×${hud.multiplier}` : '—';
-  els.panelStreak.classList.toggle('is-hot', hud.multiplier > 1);
-  els.panelBest.textContent = `${Math.max(sessionBestScore, hud.score)}`;
+  els.hudComboValue.textContent = hud.streak > 0 ? `${hud.streak} ×${hud.multiplier}` : '—';
+  els.hudCombo.classList.toggle('is-hot', hud.multiplier > 1);
+  if (hud.multiplier !== lastMultiplier) {
+    if (lastMultiplier >= 0 && hud.multiplier > lastMultiplier) {
+      retriggerAnimation(els.hudCombo, 'is-flare');
+    }
+    lastMultiplier = hud.multiplier;
+  }
+  els.hudTimerValue.textContent = formatTime(hud.elapsed);
+  const heartsKey = `${hud.hearts}/${hud.maxHearts}`;
+  if (heartsKey !== lastHeartsKey) {
+    lastHeartsKey = heartsKey;
+    let hearts = '';
+    for (let i = 0; i < hud.maxHearts; i++) hearts += heartIcon(i < hud.hearts);
+    els.hudHearts.innerHTML = hearts;
+    els.hudHearts.setAttribute('aria-label', `Hearts ${hud.hearts} of ${hud.maxHearts}`);
+  }
   els.questionPrompt.textContent = hud.prompt;
   els.questionWave.textContent = hud.wave ? `Wave ${hud.wave.current} of ${hud.wave.total}` : '';
+  fitCompactQuestion(); // re-fit only when the banner text actually changes
 }
 
 /* ------------------------------------------------------------------ */
@@ -902,20 +1231,37 @@ function processEngineEvents() {
   if (!engine) return;
   for (const event of engine.drainEvents()) {
     switch (event.type) {
-      case 'correctSlice':
+      case 'correctSlice': {
         deathDetails.set(event.fruitId, { kind: 'hit', dirX: lastSliceDir.x, dirY: lastSliceDir.y });
         addFloatNote(event.x, event.y, `+${event.points}`, 'good');
+        // The physical cut plays instantly at the hit; the educational cues
+        // follow ~80ms later so the cutting transient stays unmistakable.
+        audioManager.play('fruitCut');
+        const correctCues = [{ event: 'correct', delayMs: 80 }];
+        // Combo cues track the real streak (engine resets it on any miss).
+        if (event.streak === 2) correctCues.push({ event: 'combo2', delayMs: 150 });
+        else if (event.streak === 3 || event.streak === 4) correctCues.push({ event: 'combo3', delayMs: 150 });
+        else if (event.streak >= 5 && event.streak % 5 === 0) correctCues.push({ event: 'comboHigh', delayMs: 150 });
+        audioManager.playSequence(correctCues);
         break;
-      case 'wrongSlice':
+      }
+      case 'wrongSlice': {
         deathDetails.set(event.fruitId, { kind: 'hit', dirX: lastSliceDir.x, dirY: lastSliceDir.y });
         addFloatNote(event.x, event.y, `${event.optionText} ✗ −1 heart`, 'bad');
         els.hudHearts.classList.remove('lost');
         void els.hudHearts.offsetWidth; // restart the animation
         els.hudHearts.classList.add('lost');
+        audioManager.play('fruitCut');
+        audioManager.playSequence([
+          { event: 'incorrect', delayMs: 80 },
+          { event: 'heartLost', delayMs: 170 }, // quieter layer — sequenced, not stacked loud
+        ]);
         break;
+      }
       case 'targetMissed':
         deathDetails.set(event.fruitId, { kind: 'miss', dirX: 0, dirY: 1 });
         addFloatNote(event.x, Math.min(event.y, (engine.playfield.h || 400) - 30), 'missed', 'miss-note');
+        audioManager.play('fruitMissed'); // soft cue; avoided distractors stay silent
         break;
       case 'roundCompleted':
         showFeedback(event.report);
@@ -943,18 +1289,24 @@ function refreshView() {
   const state = engine.state;
   const inGame = appState === 'GAME';
   // An open app overlay sits above everything and owns the pause.
-  const appOverlayOpen = !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden || !els.tutorialOverlay.hidden;
-  els.readyOverlay.hidden = !(inGame && state === ENGINE_STATES.ROUND_READY && !appOverlayOpen);
-  els.pauseOverlay.hidden = !(inGame && state === ENGINE_STATES.PAUSED && !appOverlayOpen);
-  els.btnPause.disabled = state !== ENGINE_STATES.PLAYING;
-  if (state === ENGINE_STATES.ROUND_READY) {
-    const hud = engine.getHudState();
-    els.readyProgress.textContent = `Question ${hud.questionNumber} of ${hud.questionTotal}`;
-    els.readyPrompt.textContent = hud.prompt;
-    const options = engine.getOptionOutcomes();
-    const count = options ? Object.keys(options).length : 0;
-    const waves = Math.ceil(count / engine.maxActiveFruits);
-    els.readyWaves.textContent = waves > 1 ? `${count} words in ${waves} waves` : `${count} words in 1 wave`;
+  const overlayOpen = appOverlayOpen();
+  const showPause = inGame && state === ENGINE_STATES.PAUSED && !overlayOpen;
+  const wasShown = !els.pauseOverlay.hidden;
+  els.pauseOverlay.hidden = !showPause;
+  // Cinematic pause: the whole frozen scene turns black-and-white and
+  // blurs behind the one sharp, colorful Play button.
+  appRoot.classList.toggle('is-paused', showPause);
+  if (showPause && !wasShown) els.btnResume.focus({ preventScroll: true });
+  // The pause button also covers the round introduction.
+  const introPausable = state === ENGINE_STATES.ROUND_READY && intro.state !== INTRO_STATES.IDLE;
+  els.btnPause.disabled = !(state === ENGINE_STATES.PLAYING || introPausable);
+  // A prepared round on the visible game screen starts its introduction.
+  if (inGame && state === ENGINE_STATES.ROUND_READY && !overlayOpen && intro.state === INTRO_STATES.IDLE) {
+    beginRoundIntro();
+  }
+  // Flight finished while paused/hidden: launch as soon as it is safe.
+  if (intro.state === INTRO_STATES.AWAIT_LAUNCH) {
+    attemptIntroLaunch();
   }
   renderHud();
 }
@@ -963,35 +1315,90 @@ function refreshView() {
 /* Feedback and results screens                                        */
 /* ------------------------------------------------------------------ */
 
-function fillWordGroup(container, heading, words, itemClass, suffix) {
-  container.textContent = '';
-  if (!words || words.length === 0) {
-    container.hidden = true;
+/* Constant, trusted icon markup for the feedback card (never built from
+   game data — words are always inserted via textContent). */
+const FB_ICON_MARKUP = {
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.8 12.6l4.4 4.4 10-10.4" fill="none" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  cross: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.2 6.2l11.6 11.6M17.8 6.2L6.2 17.8" fill="none" stroke="currentColor" stroke-width="3.1" stroke-linecap="round"/></svg>',
+  ring: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>',
+};
+
+/**
+ * Builds one answer chip. `variant` picks the styling and icon:
+ * 'is-ok' (sliced correctly), 'is-err' (wrongly sliced) or 'is-missed'
+ * (correct answer that was never sliced — visibly distinct so a miss is
+ * never presented as a successful slice).
+ */
+function fbChip(word, variant) {
+  const li = document.createElement('li');
+  li.className = `fb-chip ${variant}`;
+  const icon = document.createElement('span');
+  icon.className = 'chip-ico';
+  icon.innerHTML = variant === 'is-ok' ? FB_ICON_MARKUP.check
+    : variant === 'is-err' ? FB_ICON_MARKUP.cross
+    : FB_ICON_MARKUP.ring;
+  const label = document.createElement('span');
+  label.className = 'chip-word';
+  label.textContent = word;
+  li.append(icon, label);
+  if (variant === 'is-missed') {
+    const tag = document.createElement('span');
+    tag.className = 'chip-tag';
+    tag.textContent = 'missed';
+    li.append(tag);
+  }
+  return li;
+}
+
+/** Renders one answer section; empty sections either show `emptyText` or hide. */
+function fillFeedbackSection(container, heading, chips, emptyText) {
+  container.replaceChildren();
+  const h = document.createElement('h3');
+  h.textContent = heading;
+  container.append(h);
+  if (chips.length === 0) {
+    if (!emptyText) {
+      container.hidden = true;
+      return;
+    }
+    container.hidden = false;
+    const p = document.createElement('p');
+    p.className = 'fb-allgood';
+    p.textContent = emptyText;
+    container.append(p);
     return;
   }
   container.hidden = false;
-  const h = document.createElement('h3');
-  h.textContent = heading;
   const list = document.createElement('ul');
-  list.className = 'fb-list';
-  for (const word of words) {
-    const li = document.createElement('li');
-    li.className = itemClass;
-    li.textContent = suffix ? `${word} ${suffix}` : word;
-    list.append(li);
-  }
-  container.append(h, list);
+  list.className = 'fb-chips';
+  list.append(...chips);
+  container.append(list);
 }
 
 function showFeedback(report) {
   els.fbProgress.textContent = `Question ${report.questionNumber} of ${report.questionTotal}`;
-  els.fbTitle.textContent = report.successful ? '✓ Round clear!' : '✗ Round finished';
-  els.fbTitle.className = report.successful ? 'fb-title-good' : 'fb-title-bad';
+  const successful = Boolean(report.successful);
+  audioManager.play(successful ? 'roundSuccess' : 'roundFailed');
+  els.fbTitle.textContent = successful ? 'Great job!' : 'Round finished';
+  els.fbResultIcon.className = `fb-result-icon ${successful ? 'is-good' : 'is-bad'}`;
+  els.fbResultIcon.innerHTML = successful ? FB_ICON_MARKUP.check : FB_ICON_MARKUP.cross;
   els.fbPrompt.textContent = report.prompt;
-  fillWordGroup(els.fbCorrect, 'Correct words', report.slicedCorrect, 'ok', '✓');
-  fillWordGroup(els.fbWrong, 'Wrong slices', report.wrongSelections, 'err', '✗');
-  fillWordGroup(els.fbMissed, 'Missed words', report.missedCorrect, 'err', '— missed');
+  // Correct-answer section: sliced words as solid green chips, missed
+  // correct answers as dashed "missed" chips (never mixed with wrong
+  // slices, never claimed as sliced).
+  const correctChips = [
+    ...report.slicedCorrect.map((word) => fbChip(word, 'is-ok')),
+    ...report.missedCorrect.map((word) => fbChip(word, 'is-missed')),
+  ];
+  fillFeedbackSection(els.fbCorrect, 'Correct words', correctChips);
+  fillFeedbackSection(
+    els.fbWrong,
+    'Wrong slices',
+    report.wrongSelections.map((word) => fbChip(word, 'is-err')),
+    'No wrong slices — clean blade!',
+  );
   els.fbExplanation.textContent = report.explanation;
+  if (els.fbFrame) els.fbFrame.scrollTop = 0; // new round starts at the top
   clearTransientFx();
   clearFruitVisuals();
   setScreen('feedback');
@@ -1010,6 +1417,10 @@ function renderStars(stars) {
 
 function showResults(report) {
   const stars = starsFor(report);
+  // Was the next level still locked before this result was recorded? (for
+  // the unlock cue — must be captured before recordLevelResult mutates it)
+  const next = nextLevel(report.lessonId);
+  const nextWasUnlocked = next ? isLevelUnlocked(progress, next.id) : false;
   els.rsTitle.textContent = report.completed ? 'Level complete!' : 'Session ended early';
   let subtitle;
   if (!report.completed) {
@@ -1038,8 +1449,38 @@ function showResults(report) {
   if (newlyEarned.length) queueAchievementToasts(newlyEarned);
 
   // Next level button: real unlock state only.
-  const next = nextLevel(report.lessonId);
   els.btnNextLevel.hidden = !(next && isLevelUnlocked(progress, next.id));
+
+  // Coherent celebration: jingle → stars → unlock → achievements, spaced
+  // instead of stacked (the manager drops anything that would mush).
+  const nextNewlyUnlocked = Boolean(next && !nextWasUnlocked && isLevelUnlocked(progress, next.id));
+  const celebration = [];
+  let atMs = 200;
+  if (!report.completed || report.passStatus !== 'passed') {
+    celebration.push({ event: 'levelFailed', delayMs: atMs });
+    atMs += 1400;
+  } else {
+    celebration.push({ event: 'levelWin', delayMs: atMs });
+    atMs += 1900;
+    if (stars >= 3) {
+      celebration.push({ event: 'threeStars', delayMs: atMs });
+      atMs += 1000;
+    } else {
+      for (let i = 0; i < stars; i++) {
+        celebration.push({ event: 'starEarned', delayMs: atMs });
+        atMs += 240;
+      }
+    }
+    if (nextNewlyUnlocked) {
+      celebration.push({ event: 'levelUnlocked', delayMs: atMs });
+      atMs += 850;
+    }
+  }
+  for (let i = 0; i < newlyEarned.length; i++) {
+    celebration.push({ event: 'achievement', delayMs: atMs });
+    atMs += 850;
+  }
+  audioManager.playSequence(celebration);
 
   const percent = (value) => (value === null ? '—' : `${Math.round(value * 100)}%`);
   const rows = [
@@ -1106,6 +1547,8 @@ function showResults(report) {
 
 let activePointerId = null;
 let lastPoint = null;
+/** One blade whoosh per intentional slash gesture (never per move event). */
+let gestureWhooshPlayed = false;
 const MIN_SWIPE_DISTANCE = 3; // px; a stationary pointer must not cut
 
 function canSlice() {
@@ -1138,6 +1581,7 @@ function onPointerDown(event) {
     /* capture is best-effort */
   }
   lastPoint = toLocal(event);
+  gestureWhooshPlayed = false;
   pushTrailPoint(lastPoint.x, lastPoint.y);
   event.preventDefault();
 }
@@ -1150,6 +1594,10 @@ function onPointerMove(event) {
     if (distance >= MIN_SWIPE_DISTANCE && canSlice()) {
       // Remember the swipe direction so slice FX follow the blade.
       lastSliceDir = { x: (point.x - lastPoint.x) / distance, y: (point.y - lastPoint.y) / distance };
+      if (!gestureWhooshPlayed) {
+        gestureWhooshPlayed = true; // + the manager's cooldown blocks spam
+        audioManager.play('bladeWhoosh');
+      }
       engine.slice(lastPoint.x, lastPoint.y, point.x, point.y);
       processEngineEvents();
     }
@@ -1179,6 +1627,7 @@ function computeMaxActiveFruits() {
 /** Re-measures the playfield; significant changes trigger round recovery. */
 function applyLayout() {
   layoutRaf = null;
+  fitCompactQuestion(); // wrapped prompts re-fit before the playfield is measured
   const w = els.playfield.clientWidth;
   const h = els.playfield.clientHeight;
   if (w <= 0 || h <= 0) return; // never spawn into a hidden playfield
@@ -1212,6 +1661,7 @@ function scheduleApplyLayout() {
 function onVisibilityChange() {
   if (document.hidden && engine && (engine.state === ENGINE_STATES.PLAYING || engine.state === ENGINE_STATES.ROUND_READY)) {
     engine.pause('hidden');
+    audioManager.setSuspended(true); // returning to the tab stays silent until Resume
     clearGesture();
     clearTransientFx();
     processEngineEvents();
@@ -1235,14 +1685,16 @@ function cleanupGameDom() {
   if (els.trailGlow) els.trailGlow.setAttribute('points', '');
   els.resizeNotice.hidden = true;
   overlayPausedByUs = false;
+  appRoot.classList.remove('is-paused'); // never carry the blur into a new screen
+  els.pauseOverlay.hidden = true;
   clearGesture();
 }
 
 function beginLevel(level) {
-  if (!progress.tutorialDone) {
-    openTutorial(level); // first ever play: interactive walkthrough first
-    return;
-  }
+  // Startup goes straight into the level; the interactive tutorial
+  // overlay remains available through openTutorial() for future entry
+  // points (its old pause-menu entry was removed with the cinematic
+  // pause redesign).
   startGame(level);
 }
 
@@ -1254,11 +1706,14 @@ function startGame(level) {
     return;
   }
   cleanupGameDom();
+  cancelIntro(); // any stale countdown/flight must never launch this session
+  audioManager.setSuspended(false); // a fresh session always starts audible
   setScreen('game'); // the playfield must be visible to be measurable
   currentLevel = level;
   sessionBestScore = Number(progress.levels[level.id]?.bestScore) || 0;
-  const stage = stageById(level.stageId);
-  els.hudLessonSub.textContent = `Level ${level.order} · ${level.title} · ${stage ? `${stage.name} (${stage.cefr})` : ''}`;
+  lastHeartsKey = ''; // force the HUD hearts to redraw for the new session
+  lastScore = -1; // no pop/flare when the fresh values first render
+  lastMultiplier = -1;
   engine = new WordSliceEngine({
     seed: ((Math.random() * 0xffffffff) >>> 0) || 1,
     maxActiveFruits: computeMaxActiveFruits(),
@@ -1273,11 +1728,13 @@ function startGame(level) {
 }
 
 function quitToLevels() {
+  cancelIntro();
   if (engine) engine.abandonToMenu();
   engine = null;
   currentLevel = null;
   stopLoop();
   cleanupGameDom();
+  audioManager.setSuspended(false);
   openLevelsScreen();
 }
 
@@ -1306,12 +1763,75 @@ function renderAchievements() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Audio bootstrap                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Reflects the manager's persisted settings into the settings overlay. */
+function syncAudioSettingsUi() {
+  const on = audioManager.isEffectsOn();
+  els.btnSoundToggle.textContent = on ? 'On' : 'Off';
+  els.btnSoundToggle.setAttribute('aria-pressed', String(on));
+  const percent = Math.round(audioManager.getEffectsVolume() * 100);
+  els.rangeEffectsVolume.value = String(percent);
+  els.rangeEffectsVolume.disabled = !on;
+  els.volumeValue.textContent = `${percent}%`;
+}
+
+function initAudio() {
+  // Debug/verification handle (stats, mute, volume — harmless in production).
+  window.wordSliceAudio = audioManager;
+  // Fetch (not decode) the essential files now; decoding waits for a
+  // gesture, per browser autoplay policy.
+  audioManager.warmup();
+
+  // The context is created/resumed from real gestures only; once running,
+  // the listeners detach. Until then the game simply plays silently.
+  const unlockAudio = () => {
+    if (audioManager.unlock()) {
+      window.removeEventListener('pointerdown', unlockAudio, true);
+      window.removeEventListener('keydown', unlockAudio, true);
+    }
+  };
+  window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
+  window.addEventListener('keydown', unlockAudio, true);
+
+  // Every visible button (including live-built level cards) gets a subtle
+  // click; keyboard activation fires click too, so this stays accessible.
+  document.addEventListener('click', (ev) => {
+    if (ev.target instanceof Element && ev.target.closest('button')) {
+      audioManager.play('buttonClick');
+    }
+  }, true);
+  // Hover blips: precise pointers (mouse/pen) only, never touch, and the
+  // manager's cooldown rate-limits fast crossing.
+  if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
+    document.addEventListener('pointerover', (ev) => {
+      if (ev.pointerType === 'touch') return;
+      if (ev.target instanceof Element && ev.target.closest('button')) {
+        audioManager.play('buttonHover');
+      }
+    }, { passive: true });
+  }
+
+  els.btnSoundToggle.addEventListener('click', () => {
+    audioManager.setMuted(audioManager.isEffectsOn()); // toggle
+    syncAudioSettingsUi();
+  });
+  els.rangeEffectsVolume.addEventListener('input', () => {
+    audioManager.setEffectsVolume(els.rangeEffectsVolume.valueAsNumber / 100);
+    syncAudioSettingsUi();
+  });
+  syncAudioSettingsUi();
+}
+
+/* ------------------------------------------------------------------ */
 /* Wiring                                                              */
 /* ------------------------------------------------------------------ */
 
 function init() {
   progress = readProgress(window.localStorage);
   preloadAppearanceImages(); // fire-and-forget; menu previews warm the cache
+  initAudio();
 
   els.btnRetry.addEventListener('click', () => loadLevelPack());
 
@@ -1329,16 +1849,15 @@ function init() {
   els.btnMenuHow.addEventListener('click', openHow);
   els.btnLevelsHow.addEventListener('click', openHow);
   els.btnHeroHow.addEventListener('click', openHow);
-  els.pwHelp.addEventListener('click', openHow);
   els.btnMenuHowClose.addEventListener('click', () => closeAppOverlay(els.menuHowOverlay));
 
   const openSettings = () => {
     renderAchievements();
+    syncAudioSettingsUi();
     openAppOverlay(els.settingsOverlay);
   };
   els.btnMenuSettings.addEventListener('click', openSettings);
   els.btnLevelsSettings.addEventListener('click', openSettings);
-  els.pwSettings.addEventListener('click', openSettings);
   els.btnSettingsClose.addEventListener('click', () => closeAppOverlay(els.settingsOverlay));
   els.btnSettingsHow.addEventListener('click', () => {
     els.settingsOverlay.hidden = true; // how-to stacks on top of settings
@@ -1370,18 +1889,16 @@ function init() {
   });
   els.btnTutorialSkip.addEventListener('click', finishTutorial);
 
-  // In-game controls.
-  els.btnLaunch.addEventListener('click', () => {
-    if (engine && engine.state === ENGINE_STATES.ROUND_READY) {
-      els.resizeNotice.hidden = true;
-      engine.launchRound();
-      clearGesture(); // rebase pointer history at round start
-      processEngineEvents();
-    }
-  });
+  // In-game controls. (Rounds launch automatically after the intro —
+  // there is no manual "Launch fruits" button anymore.)
   els.btnPause.addEventListener('click', () => {
-    if (engine && engine.state === ENGINE_STATES.PLAYING) {
-      engine.pause('user');
+    if (!engine) return;
+    const s = engine.state;
+    const introPausable = s === ENGINE_STATES.ROUND_READY && intro.state !== INTRO_STATES.IDLE;
+    if (s === ENGINE_STATES.PLAYING || introPausable) {
+      engine.pause('user'); // also freezes a running introduction
+      audioManager.play('pause'); // ui bus: audible even after suspending gameplay
+      audioManager.setSuspended(true);
       clearGesture();
       clearTransientFx();
       processEngineEvents();
@@ -1389,12 +1906,12 @@ function init() {
   });
   els.btnResume.addEventListener('click', () => {
     if (engine && engine.state === ENGINE_STATES.PAUSED) {
-      engine.resume(); // deliberate player input only
+      audioManager.setSuspended(false);
+      audioManager.play('resume'); // deliberate player input only
+      engine.resume();
       processEngineEvents();
     }
   });
-  els.btnRestart.addEventListener('click', () => currentLevel && startGame(currentLevel));
-  els.btnQuit.addEventListener('click', quitToLevels);
   els.btnContinue.addEventListener('click', () => {
     if (engine && engine.state === ENGINE_STATES.ROUND_FEEDBACK) {
       engine.continueToNextRound(); // may finalize → sessionEnded event → results
@@ -1421,6 +1938,14 @@ function init() {
   els.playfield.addEventListener('pointerup', onPointerEnd);
   els.playfield.addEventListener('pointercancel', onPointerEnd);
   els.playfield.addEventListener('lostpointercapture', onPointerEnd);
+
+  // The card's center→slot flight finishing hands over to the launch.
+  els.questionCard.addEventListener('transitionend', (ev) => {
+    if (ev.target !== els.questionCard || ev.propertyName !== 'transform') return;
+    if (intro.state === INTRO_STATES.FLIGHT && intro.settle() === 'settled') {
+      attemptIntroLaunch();
+    }
+  });
   els.playfield.addEventListener('pointerleave', () => {
     // Rebase only when the gesture is not captured: with capture the drag
     // legitimately continues; without it, leaving the board must not leave

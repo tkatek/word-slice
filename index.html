@@ -107,9 +107,13 @@
       </footer>
     </section>
 
-    <!-- LEVEL SELECT -->
+    <!-- LEVEL SELECT — arcade level map: big wooden WORD SLICE sign, three
+         CEFR stage banners (teal / burgundy / blue) and twelve parchment
+         level cards. All level data is rendered live from js/levels.js. -->
     <section id="screen-levels" class="screen screen-menu screen-levels scrollable" hidden>
       <header class="menu-nav">
+        <!-- The big sign below is this screen's brand, so the small nav logo
+             is present for shared markup but hidden by CSS here. -->
         <div class="logo-signboard" aria-hidden="true">
           <div class="logo-ropes"><i></i><i></i></div>
           <div class="logo-plank">
@@ -128,8 +132,17 @@
       </header>
 
       <main class="levels-wrap" aria-live="polite">
-        <div class="levels-summary">
-          <h2 class="levels-title">Choose a level</h2>
+        <div class="levels-hero">
+          <div class="levels-sign" aria-hidden="true">
+            <div class="logo-ropes"><i></i><i></i></div>
+            <div class="levels-sign-plank">
+              <span class="logo-leaf leaf-l"></span>
+              <span class="levels-sign-word">Word</span>
+              <span class="levels-sign-slice">Slice</span>
+              <span class="logo-leaf leaf-r"></span>
+            </div>
+            <p class="levels-sign-sub">Learn Words • Sharpen Your Mind • Slice to Success</p>
+          </div>
           <p id="levels-progress" class="levels-progress"></p>
         </div>
         <div id="levels-list" class="levels-list"></div>
@@ -143,10 +156,46 @@
     <!-- GAME -->
     <section id="screen-game" class="screen game-screen" hidden>
 
-      <!-- Top HUD: one compact arcade bar — level · round | score · combo ·
-           hearts | timer · pause — with a thin lesson-progress strip on its
-           lower edge. -->
+      <!-- Top HUD: premium navy-and-gold arcade bar — level badge · round |
+           score · combo · hearts | timer · pause — framed in wood with a
+           thin gold lesson-progress strip along its lower edge. Every value
+           is live HTML updated from the engine; the shared gradients below
+           give the SVG icons their glossy look. -->
       <header class="hud" aria-label="Game status">
+        <svg class="hud-defs" width="0" height="0" aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="hud-heart-shine" cx="0.32" cy="0.22" r="0.95">
+              <stop offset="0" stop-color="#ff97a6"/>
+              <stop offset="0.5" stop-color="#ff4864"/>
+              <stop offset="1" stop-color="#cf1c3a"/>
+            </radialGradient>
+            <linearGradient id="hud-star-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffeaa0"/>
+              <stop offset="1" stop-color="#f5a623"/>
+            </linearGradient>
+            <linearGradient id="hud-flame-body" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffc056"/>
+              <stop offset="1" stop-color="#ff5f1f"/>
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <!-- Green leaf sprigs woven into the wooden frame edges -->
+        <span class="hud-leaf hud-leaf-l" aria-hidden="true">
+          <svg viewBox="0 0 44 48" focusable="false">
+            <path d="M4 46 C10 32 18 22 30 16" fill="none" stroke="#3e9b2e" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M14 40 C4 36 2 26 8 18 C18 22 20 32 16 40 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M20 32 C24 22 34 16 42 18 C40 30 30 36 22 34 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="hud-leaf hud-leaf-r" aria-hidden="true">
+          <svg viewBox="0 0 44 48" focusable="false">
+            <path d="M4 46 C10 32 18 22 30 16" fill="none" stroke="#3e9b2e" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M14 40 C4 36 2 26 8 18 C18 22 20 32 16 40 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M20 32 C24 22 34 16 42 18 C40 30 30 36 22 34 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </span>
+
         <div class="hud-inner">
           <div class="hud-zone hud-left">
             <span class="hud-level" title="Current level">
@@ -159,15 +208,42 @@
           </div>
 
           <div class="hud-zone hud-center">
-            <span id="hud-score" class="hud-chip chip-score" title="Score">⭐ <b id="hud-score-value">0</b></span>
-            <span id="hud-combo" class="hud-chip chip-combo" title="Combo streak">🔥 <b id="hud-combo-value">—</b></span>
-            <span id="hud-hearts" class="hud-chip hud-hearts" aria-live="polite"></span>
+            <span id="hud-score" class="hud-chip chip-score" title="Score">
+              <svg class="hud-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                      fill="url(#hud-star-gold)" stroke="#b8860b" stroke-width="1.2" stroke-linejoin="round"/>
+                <path d="M12 4.6 10.05 8.9l-4.6.42 3.5 3-1.05 4.5L12 14.7V4.6z" fill="rgba(255,255,255,0.42)"/>
+              </svg>
+              <b id="hud-score-value">0</b>
+            </span>
+            <span id="hud-combo" class="hud-chip chip-combo" title="Combo streak">
+              <svg class="hud-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"
+                      fill="url(#hud-flame-body)" stroke="#c2410c" stroke-width="1" stroke-linejoin="round"/>
+                <path d="M11.7 18.9c-1.5 0-2.7-1.15-2.7-2.55 0-1.3.85-2.2 2.3-2.55 1.45-.35 2.95-1 3.8-2.1.3 1.05.45 2.15.45 3.3 0 2.15-1.75 3.9-3.85 3.9z"
+                      fill="#ffe08a"/>
+              </svg>
+              <b id="hud-combo-value">—</b>
+            </span>
+            <span id="hud-hearts" class="hud-hearts" aria-live="polite"></span>
           </div>
 
           <div class="hud-zone hud-right">
-            <span id="hud-timer" class="hud-chip chip-timer" title="Play time">⏱ <b id="hud-timer-value">0:00</b></span>
+            <span id="hud-timer" class="hud-chip chip-timer" title="Play time">
+              <svg class="hud-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9.4 2.2h5.2" stroke="#fff8eb" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M12 2.2v2.8" stroke="#fff8eb" stroke-width="2.4" stroke-linecap="round"/>
+                <circle cx="12" cy="13.7" r="8" fill="none" stroke="#fff8eb" stroke-width="2.3"/>
+                <circle cx="12" cy="13.7" r="5.6" fill="rgba(255,248,235,0.14)"/>
+                <path d="M12 9.7v4l2.9 1.9" fill="none" stroke="#fff8eb" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <b id="hud-timer-value">0:00</b>
+            </span>
             <button id="btn-pause" class="btn-round btn-pause" type="button" aria-label="Pause">
-              <span aria-hidden="true">❚❚</span>
+              <svg class="hud-pause-bars" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="6.2" y="5" width="4.4" height="14" rx="1.8"/>
+                <rect x="13.4" y="5" width="4.4" height="14" rx="1.8"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -181,14 +257,14 @@
       <!-- Question banner + playfield (score/combo live in the top HUD) -->
       <div class="game-layout">
         <div class="game-main">
-          <div class="banner-hang" aria-live="polite">
+
+          <!-- Top slot: reserves the landing zone for the question card and
+               carries the hanging ropes. The card itself is a single
+               fixed-position element that centers for the round
+               introduction and flies into this slot. -->
+          <div class="banner-hang">
             <i class="banner-rope rope-l"></i><i class="banner-rope rope-r"></i>
-            <div class="question-card">
-              <span class="banner-leaf bl-l"></span><span class="banner-leaf bl-r"></span>
-              <p id="question-prompt" class="question-prompt"></p>
-              <p id="question-wave" class="question-wave"></p>
-            </div>
-            <p class="question-helper">Tap or swipe the correct words!</p>
+            <div id="banner-slot-card" class="banner-slot-card" aria-hidden="true"></div>
           </div>
 
           <div id="playfield" class="playfield">
@@ -198,59 +274,122 @@
               <polyline id="trail-line" points="" />
             </svg>
 
-            <div id="ready-overlay" class="overlay overlay-ready" hidden>
-              <div class="card overlay-card parchment ready-card">
-                <p id="ready-progress" class="muted small"></p>
-                <h2 id="ready-prompt"></h2>
-                <p class="instructions small">Slice words that match. Leave other words untouched.</p>
-                <p id="ready-waves" class="muted small"></p>
-                <button id="btn-launch" class="btn btn-primary btn-big" type="button">Launch fruits</button>
-              </div>
-            </div>
-
             <div id="resize-notice" class="resize-notice" hidden>
-              The screen changed size. Launch the fruits again when you are ready.
-            </div>
-
-            <div id="pause-overlay" class="overlay" hidden>
-              <div class="pause-panel">
-                <div class="pause-panel-inner parchment">
-                  <h2 class="pause-title">Paused</h2>
-                  <button id="btn-resume" class="btn-resume" type="button" aria-label="Resume">
-                    <span aria-hidden="true">▶</span> Resume
-                  </button>
-                  <div class="pause-row">
-                    <button id="btn-restart" class="btn btn-wood" type="button">Restart</button>
-                    <button id="btn-quit" class="btn btn-wood" type="button">Level map</button>
-                  </div>
-                  <div class="pause-row pause-row-tools">
-                    <button id="btn-pause-help" class="btn btn-wood" type="button">? Help</button>
-                    <button id="btn-pause-settings" class="btn btn-wood" type="button">⚙ Settings</button>
-                  </div>
-                </div>
-              </div>
+              Screen size changed — the round will restart in a moment.
             </div>
           </div>
         </div>
       </div>
-      <!-- Help and Settings live in the pause menu — no permanent bottom bar,
-           so the playfield extends to the bottom of the screen. -->
     </section>
 
-    <!-- ROUND FEEDBACK -->
-    <section id="screen-feedback" class="screen scrollable" hidden>
-      <div class="card feedback-card parchment-card">
-        <p id="fb-progress" class="muted small"></p>
-        <h2 id="fb-title"></h2>
-        <p id="fb-prompt" class="question-prompt"></p>
-        <div id="fb-correct" class="fb-group"></div>
-        <div id="fb-wrong" class="fb-group"></div>
-        <div id="fb-missed" class="fb-group"></div>
-        <div class="explanation">
-          <h3>Why</h3>
-          <p id="fb-explanation"></p>
+    <!-- The one question card: the cleaned artwork asset (teal/wood frame,
+         gold borders, parchment, leaves, blank badge, blank countdown pill,
+         empty track) with every value drawn live on top. It centers for the
+         4s introduction, then flies into the compact slot as the gameplay
+         banner. Lives at the #app level (not inside #screen-game) because it
+         is position:fixed — a filtered ancestor would re-anchor it. -->
+    <div id="question-card" class="question-card" role="status" aria-live="polite" hidden>
+      <div class="qc-art qc-art-intro" aria-hidden="true"></div>
+      <div class="qc-art qc-art-compact" aria-hidden="true"></div>
+
+      <p id="qc-meta" class="qc-badge-text"></p>
+
+      <div class="qc-body">
+        <p id="question-prompt" class="question-prompt"></p>
+        <p id="question-wave" class="question-wave"></p>
+        <p id="qc-instruction" class="qc-instruction">Slice only the matching words!</p>
+      </div>
+
+      <div class="qc-countdown" id="qc-countdown" role="timer">
+        <svg class="qc-clock" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="13" r="8.5"></circle>
+          <path d="M12 8.8V13l3 1.8"></path>
+          <path d="M9.5 2.6h5"></path>
+        </svg>
+        <b id="qc-countdown-label">4</b>
+      </div>
+
+      <div class="qc-progress" aria-hidden="true"><i id="qc-countdown-fill"></i></div>
+    </div>
+
+    <!-- Cinematic pause: no panel, no text — the frozen scene blurs to
+         black-and-white behind one large centered Play button. -->
+    <div id="pause-overlay" class="pause-cinema" hidden>
+      <button id="btn-resume" class="play-orb" type="button" aria-label="Resume game">
+        <svg class="play-orb-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M8.6 5.2c0-1 1.1-1.6 1.9-1.1l9.6 5.9c.8.5.8 1.7 0 2.2l-9.6 5.9c-.8.5-1.9-.1-1.9-1.1V5.2z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ROUND FEEDBACK: centered arcade card — wooden frame, dark-teal
+         panel, gold borders, crest ornament, green/red answer chips,
+         explanation plaque and a big golden Continue button. -->
+    <section id="screen-feedback" class="screen feedback-screen" hidden>
+      <div class="fb-card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+        <span class="fb-leaf fb-leaf-tl" aria-hidden="true"></span>
+        <span class="fb-leaf fb-leaf-tr" aria-hidden="true"></span>
+        <div class="fb-crest" aria-hidden="true">
+          <svg viewBox="0 0 96 56">
+            <defs>
+              <linearGradient id="fb-crest-gold" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffe45c"/>
+                <stop offset="1" stop-color="#f0a41c"/>
+              </linearGradient>
+            </defs>
+            <!-- leaf sprigs flanking the medallion -->
+            <path d="M22 44 C10 40 5 28 9 17 C21 21 27 32 25 42 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="1.4"/>
+            <path d="M74 44 C86 40 91 28 87 17 C75 21 69 32 71 42 Z" fill="#7ed957" stroke="#3e9b2e" stroke-width="1.4"/>
+            <path d="M22 46 C15 39 11 30 11 20" fill="none" stroke="#3e9b2e" stroke-width="2" stroke-linecap="round"/>
+            <path d="M74 46 C81 39 85 30 85 20" fill="none" stroke="#3e9b2e" stroke-width="2" stroke-linecap="round"/>
+            <!-- scalloped gold medallion -->
+            <g fill="url(#fb-crest-gold)" stroke="#8a5a2b" stroke-width="1.5">
+              <circle cx="34" cy="27" r="7"/><circle cx="48" cy="27" r="7"/>
+              <circle cx="41" cy="14" r="7"/><circle cx="41" cy="40" r="7"/>
+              <circle cx="32" cy="18" r="7"/><circle cx="50" cy="18" r="7"/>
+              <circle cx="32" cy="36" r="7"/><circle cx="50" cy="36" r="7"/>
+              <circle cx="41" cy="27" r="14.5"/>
+            </g>
+            <circle cx="41" cy="27" r="10.5" fill="none" stroke="#8a5a2b" stroke-width="1.4" opacity="0.75"/>
+            <!-- red gem center -->
+            <circle cx="41" cy="27" r="5.6" fill="#e0524d" stroke="#8f2724" stroke-width="1.4"/>
+            <circle cx="39" cy="25" r="1.7" fill="#ffd9d7" opacity="0.9"/>
+          </svg>
         </div>
-        <button id="btn-continue" class="btn btn-primary btn-big" type="button">Continue</button>
+        <div class="fb-frame">
+          <p id="fb-progress" class="fb-progress"></p>
+          <div class="fb-result">
+            <span id="fb-result-icon" class="fb-result-icon" aria-hidden="true"></span>
+            <h2 id="fb-title" class="fb-title"></h2>
+          </div>
+          <div class="fb-sign">
+            <i class="fb-sign-nail" aria-hidden="true"></i>
+            <p id="fb-prompt" class="fb-prompt"></p>
+            <i class="fb-sign-nail" aria-hidden="true"></i>
+          </div>
+          <div id="fb-correct" class="fb-section"></div>
+          <div id="fb-wrong" class="fb-section"></div>
+          <div class="fb-explain">
+            <p class="fb-why">
+              <span class="fb-bulb" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2.8a6.2 6.2 0 0 0-3.5 11.3c.7.5 1 1.2 1 2v.4h5v-.4c0-.8.3-1.5 1-2A6.2 6.2 0 0 0 12 2.8z" fill="#ffd66e" stroke="#b8860b" stroke-width="1.2"/>
+                  <path d="M9.8 19h4.4M10.6 21.4h2.8" fill="none" stroke="#b8860b" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span>Why?</span>
+            </p>
+            <p id="fb-explanation" class="fb-explain-text"></p>
+          </div>
+          <button id="btn-continue" class="btn-continue" type="button">
+            <span>Continue</span>
+            <svg class="fb-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <span class="fb-leaf fb-leaf-bl" aria-hidden="true"></span>
+        <span class="fb-leaf fb-leaf-br" aria-hidden="true"></span>
       </div>
     </section>
 
@@ -290,8 +429,12 @@
         <h2>Settings</h2>
         <div class="setting-row">
           <span>Sound effects</span>
-          <span class="toggle is-off" aria-hidden="true"><i></i></span>
-          <span class="muted small">No audio yet — coming soon</span>
+          <button id="btn-sound-toggle" class="btn btn-wood btn-small sound-toggle" type="button" aria-pressed="true">On</button>
+        </div>
+        <div class="setting-row setting-row-volume">
+          <label for="range-effects-volume">Effects volume</label>
+          <input id="range-effects-volume" class="volume-range" type="range" min="0" max="100" step="5" value="80">
+          <span id="volume-value" class="muted small volume-value">80%</span>
         </div>
         <div class="setting-row">
           <span>Best score (current level)</span>

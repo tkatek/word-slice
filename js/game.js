@@ -851,6 +851,10 @@ function finishFlight() {
   const waves = engine ? Math.ceil(Object.keys(engine.getOptionOutcomes() || {}).length / engine.maxActiveFruits) : 0;
   els.questionWave.textContent = waves > 1 ? `Wave 1 of ${waves}` : '';
   fitCompactQuestion(true); // grow for wrapped prompts before fruits launch
+  // Re-check one paint later: fonts and the flight's retargeted size
+  // transitions settle asynchronously, and throttled renderers can serve
+  // stale mid-transition metrics to a same-tick measurement.
+  requestAnimationFrame(() => fitCompactQuestion(true));
 }
 
 /** Launches the round through the existing engine API — exactly once. */
@@ -1968,6 +1972,28 @@ function init() {
     new ResizeObserver(scheduleApplyLayout).observe(els.playfield);
   }
   document.addEventListener('visibilitychange', onVisibilityChange);
+
+  // Read-only debug/verification handle (mirrors window.wordSliceAudio):
+  // lets automated tests inspect the live engine and drive presentation
+  // steps in environments where rAF/timers are throttled. Never mutated
+  // by the game itself.
+  Object.defineProperty(window, '__wordSlice', {
+    configurable: true,
+    get() {
+      return {
+        engine,
+        intro,
+        appState: () => appState,
+        currentLevel: () => currentLevel,
+        progress: () => progress,
+        refreshView,
+        applyLayout,
+        stepIntro,
+        renderFrame,
+        processEngineEvents,
+      };
+    },
+  });
 
   loadLevelPack();
 }

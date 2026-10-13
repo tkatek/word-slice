@@ -658,8 +658,8 @@ body {
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--hud-gold);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  color: var(--hud-gold-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 .hud-round {
   font-size: 1.08rem;
@@ -783,7 +783,8 @@ body {
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
-/* Thin lesson-progress strip along the HUD's lower edge. */
+/* Thin lesson-progress strip along the HUD's lower edge. The faint gold
+   inner rim keeps the whole track readable even at 0%. */
 .hud-progress-track {
   position: absolute;
   left: 14px;
@@ -791,8 +792,11 @@ body {
   bottom: 5px;
   height: 5px;
   border-radius: 999px;
-  background: rgba(4, 10, 18, 0.72);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(3, 9, 16, 0.8);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(247, 185, 62, 0.16),
+    0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 .hud-progress-fill {
@@ -1335,18 +1339,16 @@ body {
 }
 
 /* Full-viewport pause veil: no panel, no text — just a whisper of
-   dimming so the bright Play button reads instantly at any scene. */
+   dimming so the bright Play button reads instantly at any scene.
+   No padding, no safe-area insets: grid centering works on the
+   content box, so any asymmetric padding would push the orb off the
+   true viewport center on notched phones. */
 .pause-cinema {
   position: fixed;
   inset: 0;
   z-index: 40; /* above the question card (z-4), below app overlays (z-50) */
   display: grid;
   place-items: center;
-  padding:
-    calc(env(safe-area-inset-top, 0px))
-    max(env(safe-area-inset-right, 0px), 8px)
-    calc(env(safe-area-inset-bottom, 0px))
-    max(env(safe-area-inset-left, 0px), 8px);
   background:
     radial-gradient(115% 115% at 50% 50%, rgba(8, 12, 20, 0) 42%, rgba(8, 12, 20, 0.30) 100%),
     rgba(8, 12, 20, 0.14);

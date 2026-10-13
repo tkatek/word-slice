@@ -140,56 +140,89 @@ Notable behaviors:
 
 ## Implemented features
 
-- Loading → menu → question-ready → gameplay → round feedback → results flow, all
-  without page reloads (Play again / Return to menu).
-- Desktop: up to 4 active answer fruits per wave. Mobile (coarse pointer or < 640 px):
-  2 per wave; every option still appears exactly once per round.
-- Mouse and touch slicing via Pointer Events with pointer capture; SVG swipe trail.
-- Score, streak/multiplier, hearts, question progress, and wave numbering in the HUD.
-- Pause overlay (blurred/desaturated backdrop), tab-hidden auto-pause, safe resume.
-- Early game over, mistake review grouped by question, percentages as "—" when the
-  denominator is zero.
-- Fruit answer items are PNG sprites (10 fruits: watermelon, pineapple, apple, orange,
-  strawberry, blueberry, banana, pear, lemon, kiwi) with whole art in
-  `assets/fruits/sprites/uncuted/` and cut art in `assets/fruits/sprites/cuted/`,
-  assigned independently of correctness. Sprites are body-trimmed (the image box
-  equals the fruit silhouette) and scaled from the engine's collision radius with a
-  small per-fruit oversize; labels stay upright via counter-rotation while the fruit
-  spins and auto-shrink for long words. A CSS placeholder ball shows until a sprite
-  finishes loading; a missing cut sprite falls back to a fade-out.
-- Slicing FX: the whole sprite is replaced by two clipped copies of the cut artwork
-  that fly apart along the swipe direction, plus a per-fruit-colored juice burst
-  (9 droplets biased along the blade) and a points popup. Blade trail with glow.
-- Scenic responsive backgrounds: `assets/backgrounds/desktop.png` (landscape) and
-  `assets/backgrounds/phone.png` (portrait, picked by orientation or ≤ 700 px width),
-  with a soft vignette so labels stay readable.
-- Wooden signboard logo ("Word" gold / "Slice" blue, ropes and leaves) on the menu,
-  loading, error, and game screens. Game HUD: logo top-left, navy round-progress bar
-  with green fill and lesson subtitle top-center, points/timer/hearts chips and a
-  circular pause button top-right, wooden Score/Combo/Best panels on the desktop
-  left edge, a hanging parchment question banner (ropes + leaves + helper line), and
-  a bottom power-up bar with four circular buttons (Slow time / Auto slice / Shield
-  are visibly locked and only show a "coming soon" toast; Settings is real).
-- First page: nav header (Home / How to Play / Settings), hero card with headline,
-  copy, glossy Play now / How to play buttons, real stored best score, and a 3-step
-  how-to (read the challenge → slice the correct fruits → avoid wrong answers) using
-  the actual fruit sprites with an animated swipe demo.
-- App-level overlays (How to play, Settings with working best-score reset) pause live
-  gameplay and suppress the in-playfield pause panel while open. Results screen
-  shows 0–3 stars earned on merit only (finish / pass / flawless pass).
-- The HUD timer shows the session's elapsed play time (engine simulation seconds —
-  it only advances while the round is actually running).
-- `tools/prep-fruits.mjs` regenerates the sprite set from the raw generated PNGs
-  (trims transparent margins, clamps near-opaque alpha, downsamples to ≤ 480 px).
+### Level progression (2.0)
+
+- 12 playable levels in 3 stages: Beginner (A1, levels 1–4), Elementary (A2,
+  5–8), Intermediate (B1, 9–12). Stage CEFR labels are design targets, not
+  certified assessment.
+- Every level ships ≥ 15 questions; a regular session selects 10 without
+  repetition (180 questions total in `data/levels/stage-{1,2,3}.json`).
+- Four validated question types: `category`, `grammar-identify`,
+  `sentence-completion`, `word-meaning`. Correctness is always explicit via
+  `correctOptionIds` — never inferred from word strings or fruit art.
+- Per-level difficulty profiles (`DIFFICULTY` in `js/levels.js`) scale flight
+  time, wave gap and spawn stagger modestly (1.30× slower at level 1 down to
+  0.92× at level 12). Fruit size never shrinks with level; mobile keeps its
+  2-fruit waves at every difficulty.
+- Stars come from successful rounds only: 10 → 3★, 9 → 2★, 8 → 1★, fewer or
+  an unfinished session → 0. Passing a level unlocks the next; unlocked
+  levels never re-lock. Results offer Next level / Play again / Level map.
+- Progress v2 (`word-slice:v2:progress`) stores per-level best stars/score,
+  plays, last session, achievements and tutorial completion. The legacy v1
+  key is preserved untouched; nothing is carried over dishonestly.
+- Five real achievements (first pass, first 3★, 5-in-a-row, five levels,
+  beginner stage) with toasts and a Settings list.
+- First-time interactive tutorial (skippable): read the question → practice
+  swipe on a real fruit (cut artwork feedback) → leave distractors → play.
+
+### Gameplay
+
+- Loading → menu → level select → question-ready → gameplay → round
+  feedback → results, all without page reloads.
+- Desktop: up to 4 active answer fruits per wave. Mobile (coarse pointer or
+  < 640 px): 2 per wave; every option still appears exactly once per round.
+- Mouse and touch slicing via Pointer Events with pointer capture; SVG swipe
+  trail with glow.
+- Score, streak/multiplier, hearts, question progress, and wave numbering in
+  the HUD. Pause overlay (blurred backdrop), tab-hidden auto-pause, safe
+  resume, resize recovery.
+- Answer fruits use only body shapes that can carry a readable word
+  (watermelon, apple, orange, blueberry, strawberry, kiwi). Sprites are
+  body-trimmed and scaled from the engine's collision radius; labels stay
+  upright via counter-rotation and auto-shrink for long words (validated to
+  ≤ 12 characters in the data pack). Narrow shapes (banana, pear, pineapple,
+  lemon) are excluded from the answer pool and remain decoration art.
+- Slicing FX: the whole sprite is replaced by two clipped copies of the cut
+  artwork that fly apart along the swipe direction, plus a per-fruit-colored
+  juice burst (9 droplets biased along the blade) and a points popup.
+- Compact question-ready parchment panel (the scenery stays visible behind
+  it), compact in-game control bar with only working buttons (Help, Settings
+  — no fake locked power-ups in the gameplay HUD).
+
+### Presentation
+
+- Wooden signboard logo ("Word" gold / "Slice" blue, ropes and leaves) on
+  every screen. Arcade first page with nav (Home / Levels / How to Play /
+  Settings), hero headline, Play/Continue · Levels · How to play buttons and
+  a real progress summary.
+- Level select styled as a progression map: three stage banners, 12
+  parchment level cards with number badge, topic, stars, best score, lock
+  state and a "Next" marker on the continue target.
+- Game HUD: logo top-left, navy round-progress bar with green fill and
+  level subtitle top-center, points/timer/hearts chips and circular pause
+  top-right, wooden Score/Combo/Best panels on the desktop left edge,
+  hanging parchment question banner (ropes + leaves + helper line).
+- Scenic responsive backgrounds: `assets/backgrounds/desktop.webp` /
+  `mobile.webp` behind a fixed background layer; orientation picks the
+  artwork and only that file is preloaded.
+- App-level overlays (How to play, Settings) pause live gameplay while
+  open. Results show earned stars plus mistake review grouped by question.
+- The HUD timer shows the session's elapsed play time (engine simulation
+  seconds — it only advances while the round is actually running).
+- `tools/prep-fruits.mjs` regenerates the sprite set from the raw generated
+  PNGs (trims margins, clamps near-opaque alpha, downsamples to ≤ 480 px).
 
 ## Intentionally deferred
 
-- Sound effects (the Settings toggle is visibly disabled and labeled as such) and any
-  further art polish of the generated backgrounds/sprites.
-- Working power-ups (Slow time / Auto slice / Shield are locked "coming soon" buttons),
-  coins, and any meta-game systems.
+- Sound effects (the Settings toggle is visibly disabled and labeled as
+  such) and further art polish of the generated backgrounds/sprites.
+- Power-ups (removed from the gameplay HUD rather than faked), coins, and
+  any meta-game systems. If assisted-answer power-ups arrive later, they
+  must not count toward learning mastery.
 - An untimed practice mode and broader accessibility work for timed slicing.
-- Additional lessons/CEFR levels and lesson unlocking.
+- B2/C1 level content — the architecture (manifest + stage files + type
+  validation) supports adding stages without engine changes, but no large
+  unreviewed advanced bank is shipped.
 
 ## Draft-content review requirement
 

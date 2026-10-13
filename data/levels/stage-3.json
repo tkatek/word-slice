@@ -1,0 +1,823 @@
+{
+  "schemaVersion": 2,
+  "stages": [
+    {
+      "stageId": "stage-3",
+      "levels": [
+        {
+          "id": "level-09",
+          "title": "Work & Study",
+          "questions": [
+            {
+              "id": "l09-q01",
+              "type": "category",
+              "prompt": "Slice the jobs.",
+              "options": [
+                { "id": "doctor", "text": "doctor" },
+                { "id": "teacher", "text": "teacher" },
+                { "id": "chef", "text": "chef" },
+                { "id": "bread", "text": "bread" },
+                { "id": "river", "text": "river" }
+              ],
+              "correctOptionIds": ["doctor", "teacher", "chef"],
+              "explanation": "Doctor, teacher and chef are jobs. Bread is food and river is a place."
+            },
+            {
+              "id": "l09-q02",
+              "type": "category",
+              "prompt": "Slice the jobs.",
+              "options": [
+                { "id": "engineer", "text": "engineer" },
+                { "id": "nurse", "text": "nurse" },
+                { "id": "pilot", "text": "pilot" },
+                { "id": "morning", "text": "morning" },
+                { "id": "wood", "text": "wood" }
+              ],
+              "correctOptionIds": ["engineer", "nurse", "pilot"],
+              "explanation": "Engineer, nurse and pilot are jobs. Morning is a time and wood is a material."
+            },
+            {
+              "id": "l09-q03",
+              "type": "category",
+              "prompt": "Slice the office things.",
+              "options": [
+                { "id": "desk", "text": "desk" },
+                { "id": "computer", "text": "computer" },
+                { "id": "paper", "text": "paper" },
+                { "id": "spoon", "text": "spoon" },
+                { "id": "fence", "text": "fence" }
+              ],
+              "correctOptionIds": ["desk", "computer", "paper"],
+              "explanation": "Desk, computer and paper are office things. Spoon is for eating and fence is outside."
+            },
+            {
+              "id": "l09-q04",
+              "type": "category",
+              "prompt": "Slice the places for studying.",
+              "options": [
+                { "id": "university", "text": "university" },
+                { "id": "library", "text": "library" },
+                { "id": "campus", "text": "campus" },
+                { "id": "beach", "text": "beach" },
+                { "id": "cinema", "text": "cinema" }
+              ],
+              "correctOptionIds": ["university", "library", "campus"],
+              "explanation": "University, library and campus are for studying. Beach and cinema are for free time."
+            },
+            {
+              "id": "l09-q05",
+              "type": "word-meaning",
+              "prompt": "Which word means \"a person who teaches\"?",
+              "options": [
+                { "id": "teacher", "text": "teacher" },
+                { "id": "doctor", "text": "doctor" },
+                { "id": "pilot", "text": "pilot" },
+                { "id": "driver", "text": "driver" }
+              ],
+              "correctOptionIds": ["teacher"],
+              "explanation": "A teacher teaches. A doctor treats patients, a pilot flies planes, a driver drives."
+            },
+            {
+              "id": "l09-q06",
+              "type": "word-meaning",
+              "prompt": "Which word means \"a place where you borrow books\"?",
+              "options": [
+                { "id": "library", "text": "library" },
+                { "id": "office", "text": "office" },
+                { "id": "bakery", "text": "bakery" },
+                { "id": "gym", "text": "gym" }
+              ],
+              "correctOptionIds": ["library"],
+              "explanation": "A library lends books. An office is for work, a bakery sells bread, a gym is for exercise."
+            },
+            {
+              "id": "l09-q07",
+              "type": "category",
+              "prompt": "Slice the study tools.",
+              "options": [
+                { "id": "laptop", "text": "laptop" },
+                { "id": "notebook", "text": "notebook" },
+                { "id": "pen", "text": "pen" },
+                { "id": "hammer", "text": "hammer" },
+                { "id": "saw", "text": "saw" }
+              ],
+              "correctOptionIds": ["laptop", "notebook", "pen"],
+              "explanation": "Laptop, notebook and pen are study tools. Hammer and saw are building tools."
+            },
+            {
+              "id": "l09-q08",
+              "type": "word-meaning",
+              "prompt": "Which word means \"money you earn from work\"?",
+              "options": [
+                { "id": "salary", "text": "salary" },
+                { "id": "prize", "text": "prize" },
+                { "id": "loan", "text": "loan" },
+                { "id": "gift", "text": "gift" }
+              ],
+              "correctOptionIds": ["salary"],
+              "explanation": "A salary is money earned from work. A prize is for winning, a loan is borrowed, a gift is free."
+            },
+            {
+              "id": "l09-q09",
+              "type": "category",
+              "prompt": "Slice the workplace verbs.",
+              "options": [
+                { "id": "hire", "text": "hire" },
+                { "id": "train", "text": "train" },
+                { "id": "meet", "text": "meet" },
+                { "id": "lazy", "text": "lazy" },
+                { "id": "slow", "text": "slow" }
+              ],
+              "correctOptionIds": ["hire", "train", "meet"],
+              "explanation": "Hire, train and meet are workplace verbs. Lazy and slow are adjectives."
+            },
+            {
+              "id": "l09-q10",
+              "type": "word-meaning",
+              "prompt": "Which word means \"a meeting to find a job\"?",
+              "options": [
+                { "id": "interview", "text": "interview" },
+                { "id": "lesson", "text": "lesson" },
+                { "id": "dinner", "text": "dinner" },
+                { "id": "travel", "text": "travel" }
+              ],
+              "correctOptionIds": ["interview"],
+              "explanation": "A job interview is a meeting about a job. A lesson is for learning, dinner is a meal, travel is moving."
+            },
+            {
+              "id": "l09-q11",
+              "type": "category",
+              "prompt": "Slice the study documents.",
+              "options": [
+                { "id": "diploma", "text": "diploma" },
+                { "id": "essay", "text": "essay" },
+                { "id": "notes", "text": "notes" },
+                { "id": "hammer", "text": "hammer" },
+                { "id": "lawn", "text": "lawn" }
+              ],
+              "correctOptionIds": ["diploma", "essay", "notes"],
+              "explanation": "Diploma, essay and notes are study documents. Hammer is a tool and lawn is grass."
+            },
+            {
+              "id": "l09-q12",
+              "type": "word-meaning",
+              "prompt": "Which word means \"to look at something carefully\"?",
+              "options": [
+                { "id": "examine", "text": "examine" },
+                { "id": "eat", "text": "eat" },
+                { "id": "skip", "text": "skip" },
+                { "id": "buy", "text": "buy" }
+              ],
+              "correctOptionIds": ["examine"],
+              "explanation": "To examine means to look at something carefully."
+            },
+            {
+              "id": "l09-q13",
+              "type": "category",
+              "prompt": "Slice the people at work.",
+              "options": [
+                { "id": "boss", "text": "boss" },
+                { "id": "client", "text": "client" },
+                { "id": "intern", "text": "intern" },
+                { "id": "spoon", "text": "spoon" },
+                { "id": "towel", "text": "towel" }
+              ],
+              "correctOptionIds": ["boss", "client", "intern"],
+              "explanation": "Boss, client and intern are people at work. Spoon and towel are objects."
+            },
+            {
+              "id": "l09-q14",
+              "type": "word-meaning",
+              "prompt": "Which word means \"knowledge from school\"?",
+              "options": [
+                { "id": "education", "text": "education" },
+                { "id": "rice", "text": "rice" },
+                { "id": "weather", "text": "weather" },
+                { "id": "sleep", "text": "sleep" }
+              ],
+              "correctOptionIds": ["education"],
+              "explanation": "Education is the knowledge you get from school. Rice is food, weather is outside, sleep is rest."
+            },
+            {
+              "id": "l09-q15",
+              "type": "category",
+              "prompt": "Slice the research words.",
+              "options": [
+                { "id": "theory", "text": "theory" },
+                { "id": "data", "text": "data" },
+                { "id": "lab", "text": "lab" },
+                { "id": "apple", "text": "apple" },
+                { "id": "cake", "text": "cake" }
+              ],
+              "correctOptionIds": ["theory", "data", "lab"],
+              "explanation": "Theory, data and lab are research words. Apple and cake are foods."
+            }
+          ]
+        },
+        {
+          "id": "level-10",
+          "title": "Past Tense & Verb Forms",
+          "questions": [
+            {
+              "id": "l10-q01",
+              "type": "sentence-completion",
+              "prompt": "Yesterday, she ___ a letter.",
+              "options": [
+                { "id": "wrote", "text": "wrote" },
+                { "id": "write", "text": "write" },
+                { "id": "writes", "text": "writes" },
+                { "id": "writing", "text": "writing" }
+              ],
+              "correctOptionIds": ["wrote"],
+              "explanation": "\"Yesterday\" signals the past: the past form of write is wrote."
+            },
+            {
+              "id": "l10-q02",
+              "type": "sentence-completion",
+              "prompt": "Last night, we ___ a film.",
+              "options": [
+                { "id": "watched", "text": "watched" },
+                { "id": "watch", "text": "watch" },
+                { "id": "watches", "text": "watches" },
+                { "id": "watching", "text": "watching" }
+              ],
+              "correctOptionIds": ["watched"],
+              "explanation": "\"Last night\" signals the past: watch becomes watched."
+            },
+            {
+              "id": "l10-q03",
+              "type": "sentence-completion",
+              "prompt": "He ___ to Japan in 2019.",
+              "options": [
+                { "id": "flew", "text": "flew" },
+                { "id": "fly", "text": "fly" },
+                { "id": "flies", "text": "flies" },
+                { "id": "flying", "text": "flying" }
+              ],
+              "correctOptionIds": ["flew"],
+              "explanation": "\"In 2019\" signals the past: the past form of fly is flew."
+            },
+            {
+              "id": "l10-q04",
+              "type": "sentence-completion",
+              "prompt": "They ___ a new house last year.",
+              "options": [
+                { "id": "bought", "text": "bought" },
+                { "id": "buy", "text": "buy" },
+                { "id": "buys", "text": "buys" },
+                { "id": "buying", "text": "buying" }
+              ],
+              "correctOptionIds": ["bought"],
+              "explanation": "\"Last year\" signals the past: the past form of buy is bought."
+            },
+            {
+              "id": "l10-q05",
+              "type": "sentence-completion",
+              "prompt": "I ___ my phone yesterday.",
+              "options": [
+                { "id": "broke", "text": "broke" },
+                { "id": "break", "text": "break" },
+                { "id": "breaks", "text": "breaks" },
+                { "id": "broken", "text": "broken" }
+              ],
+              "correctOptionIds": ["broke"],
+              "explanation": "\"Yesterday\" signals the past: the simple past of break is broke."
+            },
+            {
+              "id": "l10-q06",
+              "type": "sentence-completion",
+              "prompt": "The cat ___ the mouse.",
+              "options": [
+                { "id": "caught", "text": "caught" },
+                { "id": "catch", "text": "catch" },
+                { "id": "catches", "text": "catches" },
+                { "id": "catching", "text": "catching" }
+              ],
+              "correctOptionIds": ["caught"],
+              "explanation": "The story is finished, so the past form caught is correct."
+            },
+            {
+              "id": "l10-q07",
+              "type": "sentence-completion",
+              "prompt": "She ___ a song at the show.",
+              "options": [
+                { "id": "sang", "text": "sang" },
+                { "id": "sing", "text": "sing" },
+                { "id": "sings", "text": "sings" },
+                { "id": "singing", "text": "singing" }
+              ],
+              "correctOptionIds": ["sang"],
+              "explanation": "A finished performance uses the past: the past form of sing is sang."
+            },
+            {
+              "id": "l10-q08",
+              "type": "sentence-completion",
+              "prompt": "We ___ spaghetti for dinner last night.",
+              "options": [
+                { "id": "made", "text": "made" },
+                { "id": "make", "text": "make" },
+                { "id": "makes", "text": "makes" },
+                { "id": "making", "text": "making" }
+              ],
+              "correctOptionIds": ["made"],
+              "explanation": "\"Last night\" signals the past: the past form of make is made."
+            },
+            {
+              "id": "l10-q09",
+              "type": "sentence-completion",
+              "prompt": "The boy ___ asleep quickly.",
+              "options": [
+                { "id": "fell", "text": "fell" },
+                { "id": "fall", "text": "fall" },
+                { "id": "falls", "text": "falls" },
+                { "id": "falling", "text": "falling" }
+              ],
+              "correctOptionIds": ["fell"],
+              "explanation": "\"Fell asleep\" is the past of the fixed expression \"fall asleep\"."
+            },
+            {
+              "id": "l10-q10",
+              "type": "sentence-completion",
+              "prompt": "I ___ my grandmother last weekend.",
+              "options": [
+                { "id": "visited", "text": "visited" },
+                { "id": "visit", "text": "visit" },
+                { "id": "visits", "text": "visits" },
+                { "id": "visiting", "text": "visiting" }
+              ],
+              "correctOptionIds": ["visited"],
+              "explanation": "\"Last weekend\" signals the past: visit becomes visited."
+            },
+            {
+              "id": "l10-q11",
+              "type": "sentence-completion",
+              "prompt": "He ___ his keys on the table.",
+              "options": [
+                { "id": "left", "text": "left" },
+                { "id": "leave", "text": "leave" },
+                { "id": "leaves", "text": "leaves" },
+                { "id": "leaving", "text": "leaving" }
+              ],
+              "correctOptionIds": ["left"],
+              "explanation": "\"Left\" is the past form of leave (he forgot them there)."
+            },
+            {
+              "id": "l10-q12",
+              "type": "sentence-completion",
+              "prompt": "They ___ a lot of photos on holiday.",
+              "options": [
+                { "id": "took", "text": "took" },
+                { "id": "take", "text": "take" },
+                { "id": "takes", "text": "takes" },
+                { "id": "taking", "text": "taking" }
+              ],
+              "correctOptionIds": ["took"],
+              "explanation": "\"Take photos\" in the past becomes \"took photos\"."
+            },
+            {
+              "id": "l10-q13",
+              "type": "sentence-completion",
+              "prompt": "The rain ___ an hour ago.",
+              "options": [
+                { "id": "stopped", "text": "stopped" },
+                { "id": "stop", "text": "stop" },
+                { "id": "stops", "text": "stops" },
+                { "id": "stopping", "text": "stopping" }
+              ],
+              "correctOptionIds": ["stopped"],
+              "explanation": "\"An hour ago\" signals the past: stop becomes stopped."
+            },
+            {
+              "id": "l10-q14",
+              "type": "sentence-completion",
+              "prompt": "She ___ the door quietly.",
+              "options": [
+                { "id": "closed", "text": "closed" },
+                { "id": "close", "text": "close" },
+                { "id": "closes", "text": "closes" },
+                { "id": "closing", "text": "closing" }
+              ],
+              "correctOptionIds": ["closed"],
+              "explanation": "A completed action in the past: close becomes closed."
+            },
+            {
+              "id": "l10-q15",
+              "type": "sentence-completion",
+              "prompt": "We ___ the museum last Friday.",
+              "options": [
+                { "id": "saw", "text": "saw" },
+                { "id": "see", "text": "see" },
+                { "id": "sees", "text": "sees" },
+                { "id": "seeing", "text": "seeing" }
+              ],
+              "correctOptionIds": ["saw"],
+              "explanation": "\"Last Friday\" signals the past: the past form of see is saw."
+            }
+          ]
+        },
+        {
+          "id": "level-11",
+          "title": "Collocations & Phrasal Verbs",
+          "questions": [
+            {
+              "id": "l11-q01",
+              "type": "sentence-completion",
+              "prompt": "I always ___ up at six o'clock.",
+              "options": [
+                { "id": "wake", "text": "wake" },
+                { "id": "take", "text": "take" },
+                { "id": "look", "text": "look" },
+                { "id": "give", "text": "give" }
+              ],
+              "correctOptionIds": ["wake"],
+              "explanation": "\"Wake up\" means to stop sleeping. Take up, look up and give up mean different things."
+            },
+            {
+              "id": "l11-q02",
+              "type": "sentence-completion",
+              "prompt": "She ___ care of her sister.",
+              "options": [
+                { "id": "takes", "text": "takes" },
+                { "id": "makes", "text": "makes" },
+                { "id": "does", "text": "does" },
+                { "id": "goes", "text": "goes" }
+              ],
+              "correctOptionIds": ["takes"],
+              "explanation": "The expression is \"take care of\" — never make or do care."
+            },
+            {
+              "id": "l11-q03",
+              "type": "sentence-completion",
+              "prompt": "Let's ___ a break.",
+              "options": [
+                { "id": "take", "text": "take" },
+                { "id": "make", "text": "make" },
+                { "id": "do", "text": "do" },
+                { "id": "get", "text": "get" }
+              ],
+              "correctOptionIds": ["take"],
+              "explanation": "The expression is \"take a break\" — never make or do a break."
+            },
+            {
+              "id": "l11-q04",
+              "type": "sentence-completion",
+              "prompt": "Can you ___ me a favor?",
+              "options": [
+                { "id": "do", "text": "do" },
+                { "id": "make", "text": "make" },
+                { "id": "take", "text": "take" },
+                { "id": "give", "text": "give" }
+              ],
+              "correctOptionIds": ["do"],
+              "explanation": "The expression is \"do a favor\" — never make or take a favor."
+            },
+            {
+              "id": "l11-q05",
+              "type": "word-meaning",
+              "prompt": "Which word goes before \"homework\"?",
+              "options": [
+                { "id": "do", "text": "do" },
+                { "id": "make", "text": "make" },
+                { "id": "take", "text": "take" },
+                { "id": "pay", "text": "pay" }
+              ],
+              "correctOptionIds": ["do"],
+              "explanation": "In English you \"do homework\" — do is the verb that goes with homework."
+            },
+            {
+              "id": "l11-q06",
+              "type": "sentence-completion",
+              "prompt": "Please turn ___ the lights.",
+              "options": [
+                { "id": "on", "text": "on" },
+                { "id": "in", "text": "in" },
+                { "id": "at", "text": "at" },
+                { "id": "of", "text": "of" }
+              ],
+              "correctOptionIds": ["on"],
+              "explanation": "\"Turn on\" means to start a light or device."
+            },
+            {
+              "id": "l11-q07",
+              "type": "sentence-completion",
+              "prompt": "I'm looking ___ to the holiday.",
+              "options": [
+                { "id": "forward", "text": "forward" },
+                { "id": "behind", "text": "behind" },
+                { "id": "under", "text": "under" },
+                { "id": "above", "text": "above" }
+              ],
+              "correctOptionIds": ["forward"],
+              "explanation": "\"Look forward to\" means to feel excited about a future thing."
+            },
+            {
+              "id": "l11-q08",
+              "type": "sentence-completion",
+              "prompt": "Please sit ___.",
+              "options": [
+                { "id": "down", "text": "down" },
+                { "id": "off", "text": "off" },
+                { "id": "in", "text": "in" },
+                { "id": "over", "text": "over" }
+              ],
+              "correctOptionIds": ["down"],
+              "explanation": "\"Sit down\" means to take a seat."
+            },
+            {
+              "id": "l11-q09",
+              "type": "sentence-completion",
+              "prompt": "The plane takes ___ at noon.",
+              "options": [
+                { "id": "off", "text": "off" },
+                { "id": "on", "text": "on" },
+                { "id": "up", "text": "up" },
+                { "id": "in", "text": "in" }
+              ],
+              "correctOptionIds": ["off"],
+              "explanation": "\"Take off\" is when a plane leaves the ground."
+            },
+            {
+              "id": "l11-q10",
+              "type": "sentence-completion",
+              "prompt": "I need to look ___ this word in the dictionary.",
+              "options": [
+                { "id": "up", "text": "up" },
+                { "id": "down", "text": "down" },
+                { "id": "after", "text": "after" },
+                { "id": "out", "text": "out" }
+              ],
+              "correctOptionIds": ["up"],
+              "explanation": "\"Look up\" a word means to search for it in a dictionary."
+            },
+            {
+              "id": "l11-q11",
+              "type": "word-meaning",
+              "prompt": "Which word goes with \"strong\" for a drink?",
+              "options": [
+                { "id": "coffee", "text": "coffee" },
+                { "id": "water", "text": "water" },
+                { "id": "juice", "text": "juice" },
+                { "id": "bread", "text": "bread" }
+              ],
+              "correctOptionIds": ["coffee"],
+              "explanation": "\"Strong coffee\" is a normal collocation; we do not say strong water or strong bread."
+            },
+            {
+              "id": "l11-q12",
+              "type": "sentence-completion",
+              "prompt": "He ___ a mistake in the test.",
+              "options": [
+                { "id": "made", "text": "made" },
+                { "id": "did", "text": "did" },
+                { "id": "took", "text": "took" },
+                { "id": "went", "text": "went" }
+              ],
+              "correctOptionIds": ["made"],
+              "explanation": "The expression is \"make a mistake\" — not do or take a mistake."
+            },
+            {
+              "id": "l11-q13",
+              "type": "sentence-completion",
+              "prompt": "We ran ___ of milk.",
+              "options": [
+                { "id": "out", "text": "out" },
+                { "id": "off", "text": "off" },
+                { "id": "in", "text": "in" },
+                { "id": "up", "text": "up" }
+              ],
+              "correctOptionIds": ["out"],
+              "explanation": "\"Run out of\" means you have no more of something."
+            },
+            {
+              "id": "l11-q14",
+              "type": "word-meaning",
+              "prompt": "Which words mean \"to return\"?",
+              "options": [
+                { "id": "comeback", "text": "come back" },
+                { "id": "goout", "text": "go out" },
+                { "id": "sitdown", "text": "sit down" },
+                { "id": "wake", "text": "wake up" }
+              ],
+              "correctOptionIds": ["comeback"],
+              "explanation": "\"Come back\" means to return to a place."
+            },
+            {
+              "id": "l11-q15",
+              "type": "sentence-completion",
+              "prompt": "I grew ___ in a small town.",
+              "options": [
+                { "id": "up", "text": "up" },
+                { "id": "in", "text": "in" },
+                { "id": "on", "text": "on" },
+                { "id": "at", "text": "at" }
+              ],
+              "correctOptionIds": ["up"],
+              "explanation": "\"Grow up\" means to become older in a place."
+            }
+          ]
+        },
+        {
+          "id": "level-12",
+          "title": "Grammar in Context",
+          "questions": [
+            {
+              "id": "l12-q01",
+              "type": "sentence-completion",
+              "prompt": "Water ___ at 100 degrees.",
+              "options": [
+                { "id": "boils", "text": "boils" },
+                { "id": "boiled", "text": "boiled" },
+                { "id": "boiling", "text": "boiling" },
+                { "id": "boil", "text": "boil" }
+              ],
+              "correctOptionIds": ["boils"],
+              "explanation": "Facts always use the present simple, and water = it, so \"boils\" is correct."
+            },
+            {
+              "id": "l12-q02",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"The team wins every match\"?",
+              "options": [
+                { "id": "team", "text": "team" },
+                { "id": "wins", "text": "wins" },
+                { "id": "match", "text": "match" },
+                { "id": "every", "text": "every" }
+              ],
+              "correctOptionIds": ["wins"],
+              "explanation": "\"Wins\" is the action (verb). \"Team\" and \"match\" are nouns, \"every\" a determiner."
+            },
+            {
+              "id": "l12-q03",
+              "type": "sentence-completion",
+              "prompt": "I have ___ my homework already.",
+              "options": [
+                { "id": "done", "text": "done" },
+                { "id": "do", "text": "do" },
+                { "id": "doing", "text": "doing" },
+                { "id": "does", "text": "does" }
+              ],
+              "correctOptionIds": ["done"],
+              "explanation": "After \"have\", use the past participle: have done."
+            },
+            {
+              "id": "l12-q04",
+              "type": "sentence-completion",
+              "prompt": "She has lived here ___ 2015.",
+              "options": [
+                { "id": "since", "text": "since" },
+                { "id": "for", "text": "for" },
+                { "id": "from", "text": "from" },
+                { "id": "at", "text": "at" }
+              ],
+              "correctOptionIds": ["since"],
+              "explanation": "Use \"since\" with a starting point (2015); \"for\" goes with a length of time."
+            },
+            {
+              "id": "l12-q05",
+              "type": "sentence-completion",
+              "prompt": "They have ___ their project.",
+              "options": [
+                { "id": "finished", "text": "finished" },
+                { "id": "finish", "text": "finish" },
+                { "id": "finishing", "text": "finishing" },
+                { "id": "finishes", "text": "finishes" }
+              ],
+              "correctOptionIds": ["finished"],
+              "explanation": "After \"have\", use the past participle: have finished."
+            },
+            {
+              "id": "l12-q06",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"Music relaxes the mind\"?",
+              "options": [
+                { "id": "music", "text": "music" },
+                { "id": "relaxes", "text": "relaxes" },
+                { "id": "mind", "text": "mind" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["relaxes"],
+              "explanation": "\"Relaxes\" is the action (verb). \"Music\" and \"mind\" are nouns, \"the\" an article."
+            },
+            {
+              "id": "l12-q07",
+              "type": "sentence-completion",
+              "prompt": "I ___ never been to Paris.",
+              "options": [
+                { "id": "have", "text": "have" },
+                { "id": "has", "text": "has" },
+                { "id": "am", "text": "am" },
+                { "id": "do", "text": "do" }
+              ],
+              "correctOptionIds": ["have"],
+              "explanation": "\"I\" goes with \"have\" in the present perfect: I have never been."
+            },
+            {
+              "id": "l12-q08",
+              "type": "sentence-completion",
+              "prompt": "He promised ___ harder.",
+              "options": [
+                { "id": "towork", "text": "to work" },
+                { "id": "work", "text": "work" },
+                { "id": "works", "text": "works" },
+                { "id": "worked", "text": "worked" }
+              ],
+              "correctOptionIds": ["towork"],
+              "explanation": "After \"promised\", English uses the infinitive: promised to work."
+            },
+            {
+              "id": "l12-q09",
+              "type": "sentence-completion",
+              "prompt": "She enjoys ___ books.",
+              "options": [
+                { "id": "reading", "text": "reading" },
+                { "id": "reads", "text": "reads" },
+                { "id": "read", "text": "read" },
+                { "id": "toread", "text": "to read" }
+              ],
+              "correctOptionIds": ["reading"],
+              "explanation": "After \"enjoy\", English uses the -ing form: enjoys reading."
+            },
+            {
+              "id": "l12-q10",
+              "type": "sentence-completion",
+              "prompt": "We might ___ to Spain.",
+              "options": [
+                { "id": "move", "text": "move" },
+                { "id": "moves", "text": "moves" },
+                { "id": "moved", "text": "moved" },
+                { "id": "moving", "text": "moving" }
+              ],
+              "correctOptionIds": ["move"],
+              "explanation": "After a modal verb like \"might\", use the base form: might move."
+            },
+            {
+              "id": "l12-q11",
+              "type": "word-meaning",
+              "prompt": "Which word means \"almost the same\"?",
+              "options": [
+                { "id": "similar", "text": "similar" },
+                { "id": "different", "text": "different" },
+                { "id": "opposite", "text": "opposite" },
+                { "id": "equal", "text": "equal" }
+              ],
+              "correctOptionIds": ["similar"],
+              "explanation": "Similar means almost the same. Different and opposite mean NOT the same."
+            },
+            {
+              "id": "l12-q12",
+              "type": "sentence-completion",
+              "prompt": "This book is ___ interesting than that one.",
+              "options": [
+                { "id": "more", "text": "more" },
+                { "id": "most", "text": "most" },
+                { "id": "much", "text": "much" },
+                { "id": "very", "text": "very" }
+              ],
+              "correctOptionIds": ["more"],
+              "explanation": "Comparatives with \"than\" use \"more\" + long adjective: more interesting than."
+            },
+            {
+              "id": "l12-q13",
+              "type": "sentence-completion",
+              "prompt": "It is the ___ film I have ever seen.",
+              "options": [
+                { "id": "best", "text": "best" },
+                { "id": "better", "text": "better" },
+                { "id": "good", "text": "good" },
+                { "id": "well", "text": "well" }
+              ],
+              "correctOptionIds": ["best"],
+              "explanation": "\"The ... ever\" needs the superlative: the best film ever."
+            },
+            {
+              "id": "l12-q14",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"She sings beautiful songs\"?",
+              "options": [
+                { "id": "sings", "text": "sings" },
+                { "id": "beautiful", "text": "beautiful" },
+                { "id": "songs", "text": "songs" },
+                { "id": "she", "text": "she" }
+              ],
+              "correctOptionIds": ["beautiful"],
+              "explanation": "\"Beautiful\" describes the songs, so it is the adjective. \"Sings\" is a verb, \"songs\" a noun."
+            },
+            {
+              "id": "l12-q15",
+              "type": "sentence-completion",
+              "prompt": "She suggested ___ a taxi.",
+              "options": [
+                { "id": "taking", "text": "taking" },
+                { "id": "takes", "text": "takes" },
+                { "id": "take", "text": "take" },
+                { "id": "totake", "text": "to take" }
+              ],
+              "correctOptionIds": ["taking"],
+              "explanation": "After \"suggested\", English uses the -ing form: suggested taking."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,10 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Word Slice — Learn English. Slice the Right Words!</title>
+  <!-- Scenic backgrounds: only the file matching the current orientation is fetched. -->
+  <link rel="preload" as="image" href="assets/backgrounds/desktop.webp" media="(orientation: landscape)" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/backgrounds/mobile.webp" media="(orientation: portrait)" fetchpriority="high">
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
   <div id="app">
+
+    <!-- Fixed scenery layer shared by every screen (never intercepts input) -->
+    <div class="game-background" aria-hidden="true"></div>
 
     <!-- LOADING -->
     <section id="screen-loading" class="screen" aria-live="polite">
@@ -20,7 +26,7 @@
           <span class="logo-leaf leaf-r"></span>
         </div>
       </div>
-      <p class="muted loading-note">Loading lesson…</p>
+      <p class="muted loading-note">Loading levels…</p>
     </section>
 
     <!-- ERROR -->
@@ -52,6 +58,7 @@
         </div>
         <nav class="menu-links" aria-label="Menu">
           <button id="btn-menu-home" class="menu-link is-active" type="button">Home</button>
+          <button id="btn-menu-levels" class="menu-link" type="button">Levels</button>
           <button id="btn-menu-how" class="menu-link" type="button">How to Play</button>
           <button id="btn-menu-settings" class="menu-link menu-link-icon" type="button" aria-label="Settings">⚙</button>
         </nav>
@@ -59,16 +66,16 @@
 
       <main class="menu-hero">
         <div class="hero-copy">
-          <h1 class="hero-title">Learn English.<br>Slice the Right Words!</h1>
+          <h1 class="hero-title">Learn English.<br><span class="accent-line">Slice the Right Words!</span></h1>
           <p class="hero-text">Read the challenge, slice the correct words, and build your English skills while earning points.</p>
           <div class="hero-actions">
-            <button id="btn-play" class="btn btn-play-now" type="button">▶ Play now</button>
+            <button id="btn-play" class="btn btn-play-now" type="button">▶ <span id="btn-play-label">Play</span></button>
+            <button id="btn-hero-levels" class="btn btn-how" type="button">Levels</button>
             <button id="btn-hero-how" class="btn btn-how" type="button">How to play</button>
           </div>
           <div class="lesson-chip" id="menu-lesson-card">
-            <span class="lesson-chip-label">Lesson</span>
-            <strong id="menu-lesson-title"></strong>
-            <span id="menu-lesson-meta" class="muted"></span>
+            <span class="lesson-chip-label">Progress</span>
+            <strong id="menu-lesson-title">12 levels · 3 stages</strong>
             <span id="menu-best" class="menu-best"></span>
           </div>
         </div>
@@ -97,6 +104,39 @@
 
       <footer class="menu-foot">
         <p class="muted small">Word Slice · English practice with a blade · runs fully in your browser</p>
+      </footer>
+    </section>
+
+    <!-- LEVEL SELECT -->
+    <section id="screen-levels" class="screen screen-menu screen-levels scrollable" hidden>
+      <header class="menu-nav">
+        <div class="logo-signboard" aria-hidden="true">
+          <div class="logo-ropes"><i></i><i></i></div>
+          <div class="logo-plank">
+            <span class="logo-leaf leaf-l"></span>
+            <span class="logo-word">Word</span>
+            <span class="logo-slice">Slice</span>
+            <span class="logo-leaf leaf-r"></span>
+          </div>
+        </div>
+        <nav class="menu-links" aria-label="Menu">
+          <button id="btn-levels-home" class="menu-link" type="button">Home</button>
+          <button id="btn-levels-levels" class="menu-link is-active" type="button">Levels</button>
+          <button id="btn-levels-how" class="menu-link" type="button">How to Play</button>
+          <button id="btn-levels-settings" class="menu-link menu-link-icon" type="button" aria-label="Settings">⚙</button>
+        </nav>
+      </header>
+
+      <main class="levels-wrap" aria-live="polite">
+        <div class="levels-summary">
+          <h2 class="levels-title">Choose a level</h2>
+          <p id="levels-progress" class="levels-progress"></p>
+        </div>
+        <div id="levels-list" class="levels-list"></div>
+      </main>
+
+      <footer class="menu-foot">
+        <p class="muted small">Pass a level to unlock the next one. Earn stars with 8, 9 or 10 clear rounds.</p>
       </footer>
     </section>
 
@@ -169,9 +209,9 @@
               <polyline id="trail-line" points="" />
             </svg>
 
-            <div id="ready-overlay" class="overlay" hidden>
-              <div class="card overlay-card parchment">
-                <p id="ready-progress" class="muted"></p>
+            <div id="ready-overlay" class="overlay overlay-ready" hidden>
+              <div class="card overlay-card parchment ready-card">
+                <p id="ready-progress" class="muted small"></p>
                 <h2 id="ready-prompt"></h2>
                 <p class="instructions small">Slice words that match. Leave other words untouched.</p>
                 <p id="ready-waves" class="muted small"></p>
@@ -192,7 +232,7 @@
                   </button>
                   <div class="pause-row">
                     <button id="btn-restart" class="btn btn-wood" type="button">Restart</button>
-                    <button id="btn-quit" class="btn btn-wood" type="button">Main menu</button>
+                    <button id="btn-quit" class="btn btn-wood" type="button">Level map</button>
                   </div>
                 </div>
               </div>
@@ -201,22 +241,11 @@
         </div>
       </div>
 
-      <!-- Bottom power-up bar -->
-      <footer class="power-bar" aria-label="Power-ups and settings">
-        <button id="pw-slow" class="power-btn is-locked" type="button" data-power="Slow time" aria-label="Slow time — coming soon">
-          <span class="power-icon" aria-hidden="true">⏱</span>
-          <span class="power-lock" aria-hidden="true">🔒</span>
-          <span class="power-name">Slow time</span>
-        </button>
-        <button id="pw-auto" class="power-btn is-locked" type="button" data-power="Auto slice" aria-label="Auto slice — coming soon">
-          <span class="power-icon" aria-hidden="true">⚡</span>
-          <span class="power-lock" aria-hidden="true">🔒</span>
-          <span class="power-name">Auto slice</span>
-        </button>
-        <button id="pw-shield" class="power-btn is-locked" type="button" data-power="Shield" aria-label="Shield — coming soon">
-          <span class="power-icon" aria-hidden="true">🛡</span>
-          <span class="power-lock" aria-hidden="true">🔒</span>
-          <span class="power-name">Shield</span>
+      <!-- Bottom controls: compact help + settings only (no fake power-ups) -->
+      <footer class="power-bar power-bar-compact" aria-label="Game controls">
+        <button id="pw-help" class="power-btn" type="button" aria-label="How to play">
+          <span class="power-icon" aria-hidden="true">?</span>
+          <span class="power-name">Help</span>
         </button>
         <button id="pw-settings" class="power-btn" type="button" aria-label="Settings">
           <span class="power-icon" aria-hidden="true">⚙</span>
@@ -228,7 +257,7 @@
     <!-- ROUND FEEDBACK -->
     <section id="screen-feedback" class="screen scrollable" hidden>
       <div class="card feedback-card parchment-card">
-        <p id="fb-progress" class="muted"></p>
+        <p id="fb-progress" class="muted small"></p>
         <h2 id="fb-title"></h2>
         <p id="fb-prompt" class="question-prompt"></p>
         <div id="fb-correct" class="fb-group"></div>
@@ -244,20 +273,21 @@
 
     <!-- RESULTS -->
     <section id="screen-results" class="screen scrollable" hidden>
-      <div class="card feedback-card results-card">
+      <div class="card feedback-card results-card parchment-card">
         <h2 id="rs-title"></h2>
         <div id="rs-stars" class="rs-stars" aria-hidden="true"></div>
         <p id="rs-subtitle" class="muted"></p>
         <dl id="rs-stats" class="stats"></dl>
         <div id="rs-review"></div>
         <div class="btn-row">
+          <button id="btn-next-level" class="btn btn-primary" type="button" hidden>Next level ▶</button>
           <button id="btn-again" class="btn btn-primary" type="button">Play again</button>
-          <button id="btn-menu" class="btn" type="button">Main menu</button>
+          <button id="btn-menu" class="btn" type="button">Level map</button>
         </div>
       </div>
     </section>
 
-    <!-- MENU-LEVEL OVERLAYS (usable from menu and in-game settings button) -->
+    <!-- APP-LEVEL OVERLAYS -->
     <div id="menu-how-overlay" class="app-overlay" hidden>
       <div class="card overlay-card parchment-card menu-how-card">
         <h2>How to play</h2>
@@ -266,6 +296,7 @@
           <li><strong>Swipe through fruits</strong> whose word matches — tap or drag, both work.</li>
           <li><strong>Leave other fruits untouched</strong>; wrong slices cost a heart.</li>
           <li><strong>Keep the streak</strong> — 3+ correct in a row doubles your points.</li>
+          <li><strong>Pass levels</strong> to unlock the next one and earn stars.</li>
         </ol>
         <button id="btn-menu-how-close" class="btn btn-primary btn-big" type="button">Got it!</button>
       </div>
@@ -280,15 +311,31 @@
           <span class="muted small">No audio yet — coming soon</span>
         </div>
         <div class="setting-row">
-          <span>Best score (this device)</span>
+          <span>Best score (current level)</span>
           <button id="btn-reset-best" class="btn btn-wood btn-small" type="button">Reset</button>
         </div>
         <div class="setting-row">
           <span>Game rules</span>
           <button id="btn-settings-how" class="btn btn-wood btn-small" type="button">How to play</button>
         </div>
+        <div class="settings-achievements">
+          <h3>Achievements</h3>
+          <ul id="achievements-list" class="achievements-list"></ul>
+        </div>
         <p class="muted small">Progress is saved locally in your browser.</p>
         <button id="btn-settings-close" class="btn btn-primary btn-big" type="button">Close</button>
+      </div>
+    </div>
+
+    <!-- FIRST-TIME TUTORIAL (skippable, real fruit sprites, one practice swipe) -->
+    <div id="tutorial-overlay" class="app-overlay" hidden>
+      <div class="card overlay-card parchment-card tutorial-card">
+        <h2 id="tutorial-title">Quick tutorial</h2>
+        <div id="tutorial-steps" class="tutorial-steps"></div>
+        <div class="tutorial-actions">
+          <button id="btn-tutorial-skip" class="btn btn-wood btn-small" type="button">Skip</button>
+          <button id="btn-tutorial-next" class="btn btn-primary" type="button">Next</button>
+        </div>
       </div>
     </div>
 

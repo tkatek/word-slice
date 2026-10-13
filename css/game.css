@@ -60,6 +60,31 @@ html, body {
     max(env(safe-area-inset-left, 0px), 8px);
 }
 
+/* ---------------------------------------------------------------- */
+/* Fixed scenery layer shared by every screen                        */
+/* ---------------------------------------------------------------- */
+/* One element behind all screens: the art never reloads or shifts
+   when navigating between menu, gameplay, feedback and results.
+   Orientation (aspect ratio), not device width, picks the artwork:
+   landscape screens get the 16:9 view, taller-than-wide screens the
+   9:16 view — so tablets are covered in both orientations. */
+.game-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    url("../assets/backgrounds/desktop.webp") center / cover no-repeat,
+    #3f6d76; /* water/mountain teal while loading or if the art fails */
+  pointer-events: none; /* decorative only — never blocks slicing */
+}
+@media (orientation: portrait) {
+  .game-background {
+    background:
+      url("../assets/backgrounds/mobile.webp") center / cover no-repeat,
+      #3f6d76;
+  }
+}
+
 .screen {
   flex: 1;
   min-height: 0;
@@ -73,7 +98,7 @@ html, body {
 
 .muted { color: var(--ink-dim); }
 .small { font-size: 0.9rem; }
-.error-text { color: var(--bad); margin: 8px 0 16px; }
+.error-text { color: var(--bad); margin: 8px 0 16px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65), 0 0 10px rgba(0, 0, 0, 0.4); }
 .instructions { margin: 14px 0; line-height: 1.45; }
 .instructions.small { margin: 10px 0; color: var(--ink-dim); }
 
@@ -277,19 +302,10 @@ html, body {
 
 .screen-menu {
   justify-content: flex-start;
-  background:
-    linear-gradient(180deg, rgba(10, 14, 24, 0.30) 0%, rgba(10, 14, 24, 0.05) 40%, rgba(10, 14, 24, 0.45) 100%),
-    url("../assets/backgrounds/desktop.png") center / cover no-repeat,
-    #22301f;
+  /* Soft shading over the shared scenery — darkens the top/bottom edges
+     for text legibility without dimming the whole picture. */
+  background: linear-gradient(180deg, rgba(10, 14, 24, 0.30) 0%, rgba(10, 14, 24, 0.05) 40%, rgba(10, 14, 24, 0.45) 100%);
   overflow-y: auto;
-}
-@media (orientation: portrait), (max-width: 700px) {
-  .screen-menu {
-    background:
-      linear-gradient(180deg, rgba(10, 14, 24, 0.28) 0%, rgba(10, 14, 24, 0.05) 40%, rgba(10, 14, 24, 0.42) 100%),
-      url("../assets/backgrounds/phone.png") center / cover no-repeat,
-      #22301f;
-  }
 }
 
 .menu-nav {
@@ -492,18 +508,9 @@ html, body {
   justify-content: flex-start;
   gap: 8px;
   padding: 8px 0 6px;
-  background:
-    linear-gradient(180deg, rgba(12, 16, 26, 0.16) 0%, rgba(12, 16, 26, 0) 30%, rgba(12, 16, 26, 0.20) 100%),
-    url("../assets/backgrounds/desktop.png") center / cover no-repeat,
-    #22301f;
-}
-@media (orientation: portrait), (max-width: 700px) {
-  .game-screen {
-    background:
-      linear-gradient(180deg, rgba(12, 16, 26, 0.14) 0%, rgba(12, 16, 26, 0) 30%, rgba(12, 16, 26, 0.18) 100%),
-      url("../assets/backgrounds/phone.png") center / cover no-repeat,
-      #22301f;
-  }
+  /* Barely-there vignette so HUD/banners stay crisp; the scenery itself
+     stays vibrant and un-blurred during normal play. */
+  background: linear-gradient(180deg, rgba(12, 16, 26, 0.16) 0%, rgba(12, 16, 26, 0) 30%, rgba(12, 16, 26, 0.20) 100%);
 }
 
 /* Top HUD: logo (left) · round progress (center) · stats + pause (right) */
@@ -1152,6 +1159,13 @@ html, body {
 /* Feedback and results screens                                      */
 /* ---------------------------------------------------------------- */
 
+/* The shared scenery stays visible behind the cards; a whisper of
+   shading top-to-bottom keeps the parchment crisp and readable. */
+#screen-feedback,
+#screen-results {
+  background: linear-gradient(180deg, rgba(12, 16, 26, 0.16) 0%, rgba(12, 16, 26, 0.30) 100%);
+}
+
 .feedback-card {
   width: min(94vw, 560px);
   margin: 0 auto;
@@ -1235,6 +1249,9 @@ html, body {
   justify-content: center;
   gap: 14px;
   text-align: center;
+  /* Gentle center shading over the scenery so the logo and status text
+     stay readable before any level data has arrived. */
+  background: radial-gradient(120% 90% at 50% 50%, rgba(10, 14, 24, 0.38) 0%, rgba(10, 14, 24, 0.14) 100%);
 }
 .loading-note { font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
 
@@ -1308,4 +1325,219 @@ html, body {
   .value-combo.is-hot { animation: none; }
   #trail-line { filter: none; }
   .progress-fill { transition: none; }
+}
+
+/* ================================================================== */
+/* WORD SLICE 2.0 — level select, tutorial, achievements, compact bar  */
+/* ================================================================== */
+
+/* Compact ready overlay: keep the scenery visible behind a slim panel. */
+.overlay-ready {
+  background: rgba(15, 18, 28, 0.22);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.ready-card {
+  width: min(92%, 430px);
+  padding: 14px 18px 16px;
+}
+.ready-card h2 { font-size: 1.2rem; margin: 2px 0; }
+
+/* Compact in-game control bar (help + settings only, no fake power-ups). */
+.power-bar-compact { padding: 5px 16px 3px; gap: 26px; }
+.power-bar-compact .power-icon { width: 40px; height: 40px; font-size: 1rem; }
+.power-bar-compact .power-name { font-size: 0.6rem; }
+
+/* Level select screen ------------------------------------------------ */
+.screen-levels { justify-content: flex-start; }
+.levels-wrap {
+  flex: 1;
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 8px 18px 22px;
+}
+.levels-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 14px;
+}
+.levels-title { margin: 0; font-size: clamp(1.4rem, 3vw, 1.9rem); color: #fff; text-shadow: 0 2px 0 rgba(30, 20, 8, 0.55); }
+.levels-progress { margin: 0; font-weight: 800; color: var(--gold-1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.levels-list { display: flex; flex-direction: column; gap: 18px; }
+.stage-block { display: flex; flex-direction: column; gap: 10px; }
+.stage-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--wood-1), var(--wood-2) 75%);
+  border: 2px solid var(--wood-3);
+  box-shadow: inset 0 2px 0 rgba(255, 235, 200, 0.3), 0 5px 12px rgba(0, 0, 0, 0.4);
+}
+.stage-name { font-weight: 900; color: #ffe9c9; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.stage-cefr {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  border: 1px solid #b8860b;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.stage-desc { margin-left: auto; font-size: 0.78rem; color: #ffe9c9; opacity: 0.85; }
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 14px 12px;
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(93deg, rgba(84, 52, 18, 0.08) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, var(--parchment) 0%, #f3e2b8 100%);
+  border: 3px solid var(--wood-2);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    0 6px 14px rgba(0, 0, 0, 0.45);
+  color: var(--wood-ink);
+}
+.level-card.is-next {
+  border-color: #c98a12;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.6),
+    0 0 0 3px rgba(255, 200, 60, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.level-card.is-locked { filter: saturate(0.35) brightness(0.82); }
+.level-top { display: flex; align-items: center; gap: 8px; }
+.level-number {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-weight: 900;
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  border: 2px solid #b8860b;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+.level-title { font-weight: 900; font-size: 0.98rem; line-height: 1.15; }
+.level-topic { font-size: 0.78rem; color: #5f431c; min-height: 2.2em; }
+.level-stars { font-size: 1.05rem; letter-spacing: 2px; min-height: 1.3em; }
+.level-stars .star-off { opacity: 0.3; filter: grayscale(1); }
+.level-best { font-size: 0.75rem; font-weight: 800; color: #7a5a10; }
+.level-play {
+  margin-top: 4px;
+  font: inherit;
+  font-weight: 900;
+  color: #5b3a00;
+  background: linear-gradient(180deg, #ffe08a, #ffc233);
+  border: 2px solid #b8860b;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #a86f0a;
+}
+.level-play:active { transform: translateY(2px); box-shadow: 0 1px 0 #a86f0a; }
+.level-lock {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #6b5233;
+  border: 2px dashed rgba(107, 82, 51, 0.5);
+  border-radius: 10px;
+  padding: 7px 8px;
+}
+.level-badge-next {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  border: 2px solid #b8860b;
+  border-radius: 999px;
+  padding: 2px 9px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Tutorial overlay --------------------------------------------------- */
+.tutorial-card { width: min(100%, 430px); }
+.tutorial-steps { min-height: 190px; display: flex; flex-direction: column; }
+.tutorial-step { display: none; }
+.tutorial-step.is-active { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: tutorial-in 0.25s ease; }
+.tutorial-step img { height: 96px; width: auto; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)); }
+.tutorial-step h3 { margin: 0; font-size: 1.1rem; color: var(--wood-ink); }
+.tutorial-step p { margin: 0; text-align: center; color: #5f431c; line-height: 1.45; }
+.tutorial-fruit-demo {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+.tutorial-fruit-demo img { height: 120px; }
+.tutorial-fruit-demo .fruit-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.tutorial-fruit-demo .demo-blade {
+  position: absolute;
+  left: -6%;
+  top: 55%;
+  width: 112%;
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 45%, #fff 100%);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.85);
+  animation: swipe-sweep 1.8s ease-in-out infinite;
+}
+.tutorial-hint { font-size: 0.82rem; font-weight: 800; color: #9a6a1a; }
+.tutorial-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+@keyframes tutorial-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Achievements list --------------------------------------------------- */
+.settings-achievements h3 { margin: 12px 0 6px; font-size: 1rem; color: var(--wood-ink); }
+.achievements-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.achievements-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: var(--wood-ink);
+  border: 1px dashed rgba(93, 58, 23, 0.35);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.achievements-list .ach-icon { filter: grayscale(1); opacity: 0.4; }
+.achievements-list li.is-earned { border-style: solid; border-color: #c98a12; background: rgba(255, 209, 102, 0.25); }
+.achievements-list li.is-earned .ach-icon { filter: none; opacity: 1; }
+.achievements-list .ach-name { font-weight: 900; }
+.achievements-list .ach-desc { color: #5f431c; font-size: 0.78rem; }
+
+/* Level select on phones: single column, roomy cards. */
+@media (max-width: 640px) {
+  .levels-wrap { padding: 6px 12px 18px; }
+  .stage-grid { grid-template-columns: 1fr; }
+  .stage-desc { display: none; }
+  .tutorial-card { width: 100%; }
 }

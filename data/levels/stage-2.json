@@ -1,0 +1,840 @@
+{
+  "schemaVersion": 2,
+  "stages": [
+    {
+      "stageId": "stage-2",
+      "levels": [
+        {
+          "id": "level-05",
+          "title": "Action Verbs",
+          "questions": [
+            {
+              "id": "l05-q01",
+              "type": "category",
+              "prompt": "Slice the action verbs.",
+              "options": [
+                { "id": "run", "text": "run" },
+                { "id": "swim", "text": "swim" },
+                { "id": "jump", "text": "jump" },
+                { "id": "happy", "text": "happy" },
+                { "id": "green", "text": "green" }
+              ],
+              "correctOptionIds": ["run", "swim", "jump"],
+              "explanation": "Run, swim and jump are action verbs. Happy and green are adjectives."
+            },
+            {
+              "id": "l05-q02",
+              "type": "category",
+              "prompt": "Slice the action verbs.",
+              "options": [
+                { "id": "eat", "text": "eat" },
+                { "id": "drink", "text": "drink" },
+                { "id": "sleep", "text": "sleep" },
+                { "id": "table", "text": "table" },
+                { "id": "water", "text": "water" }
+              ],
+              "correctOptionIds": ["eat", "drink", "sleep"],
+              "explanation": "Eat, drink and sleep are action verbs. Table is a thing and water is a noun here."
+            },
+            {
+              "id": "l05-q03",
+              "type": "category",
+              "prompt": "Slice the movement verbs.",
+              "options": [
+                { "id": "walk", "text": "walk" },
+                { "id": "crawl", "text": "crawl" },
+                { "id": "dance", "text": "dance" },
+                { "id": "think", "text": "think" },
+                { "id": "decide", "text": "decide" }
+              ],
+              "correctOptionIds": ["walk", "crawl", "dance"],
+              "explanation": "Walk, crawl and dance move your body through space. Think and decide happen in the mind."
+            },
+            {
+              "id": "l05-q04",
+              "type": "category",
+              "prompt": "Slice the action verbs.",
+              "options": [
+                { "id": "cook", "text": "cook" },
+                { "id": "wash", "text": "wash" },
+                { "id": "iron", "text": "iron" },
+                { "id": "kitchen", "text": "kitchen" },
+                { "id": "soap", "text": "soap" }
+              ],
+              "correctOptionIds": ["cook", "wash", "iron"],
+              "explanation": "Cook, wash and iron are action verbs. Kitchen is a place and soap is a thing."
+            },
+            {
+              "id": "l05-q05",
+              "type": "category",
+              "prompt": "Slice the communication verbs.",
+              "options": [
+                { "id": "talk", "text": "talk" },
+                { "id": "say", "text": "say" },
+                { "id": "ask", "text": "ask" },
+                { "id": "eat", "text": "eat" },
+                { "id": "run", "text": "run" }
+              ],
+              "correctOptionIds": ["talk", "say", "ask"],
+              "explanation": "Talk, say and ask communicate ideas. Eat and run are physical actions."
+            },
+            {
+              "id": "l05-q06",
+              "type": "category",
+              "prompt": "Slice the action verbs.",
+              "options": [
+                { "id": "read", "text": "read" },
+                { "id": "study", "text": "study" },
+                { "id": "play", "text": "play" },
+                { "id": "chair", "text": "chair" },
+                { "id": "lamp", "text": "lamp" }
+              ],
+              "correctOptionIds": ["read", "study", "play"],
+              "explanation": "Read, study and play are action verbs. Chair and lamp are objects."
+            },
+            {
+              "id": "l05-q07",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"The children play outside\"?",
+              "options": [
+                { "id": "children", "text": "children" },
+                { "id": "play", "text": "play" },
+                { "id": "outside", "text": "outside" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["play"],
+              "explanation": "\"Play\" is the action word (verb). \"Children\" is a noun, \"outside\" a place word, \"the\" an article."
+            },
+            {
+              "id": "l05-q08",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"My mother cooks dinner\"?",
+              "options": [
+                { "id": "mother", "text": "mother" },
+                { "id": "cooks", "text": "cooks" },
+                { "id": "dinner", "text": "dinner" },
+                { "id": "my", "text": "my" }
+              ],
+              "correctOptionIds": ["cooks"],
+              "explanation": "\"Cooks\" is the action (verb). \"Mother\" and \"dinner\" are nouns, \"my\" a possessive."
+            },
+            {
+              "id": "l05-q09",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"Birds fly south in winter\"?",
+              "options": [
+                { "id": "birds", "text": "birds" },
+                { "id": "fly", "text": "fly" },
+                { "id": "south", "text": "south" },
+                { "id": "winter", "text": "winter" }
+              ],
+              "correctOptionIds": ["fly"],
+              "explanation": "\"Fly\" is the action (verb). \"Birds\" is a noun, \"south\" a direction, \"winter\" a season."
+            },
+            {
+              "id": "l05-q10",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"She reads every night\"?",
+              "options": [
+                { "id": "she", "text": "she" },
+                { "id": "reads", "text": "reads" },
+                { "id": "night", "text": "night" },
+                { "id": "every", "text": "every" }
+              ],
+              "correctOptionIds": ["reads"],
+              "explanation": "\"Reads\" is the action (verb). \"She\" is a pronoun, \"night\" a noun, \"every\" a determiner."
+            },
+            {
+              "id": "l05-q11",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"The dog sleeps all day\"?",
+              "options": [
+                { "id": "dog", "text": "dog" },
+                { "id": "sleeps", "text": "sleeps" },
+                { "id": "day", "text": "day" },
+                { "id": "all", "text": "all" }
+              ],
+              "correctOptionIds": ["sleeps"],
+              "explanation": "\"Sleeps\" is the action (verb). \"Dog\" and \"day\" are nouns, \"all\" a quantifier."
+            },
+            {
+              "id": "l05-q12",
+              "type": "category",
+              "prompt": "Slice the verbs you do with your hands.",
+              "options": [
+                { "id": "draw", "text": "draw" },
+                { "id": "sew", "text": "sew" },
+                { "id": "type", "text": "type" },
+                { "id": "listen", "text": "listen" },
+                { "id": "smell", "text": "smell" }
+              ],
+              "correctOptionIds": ["draw", "sew", "type"],
+              "explanation": "Draw, sew and type use your hands. Listen uses ears and smell uses your nose."
+            },
+            {
+              "id": "l05-q13",
+              "type": "category",
+              "prompt": "Slice the action verbs.",
+              "options": [
+                { "id": "buy", "text": "buy" },
+                { "id": "sell", "text": "sell" },
+                { "id": "pay", "text": "pay" },
+                { "id": "money", "text": "money" },
+                { "id": "cheap", "text": "cheap" }
+              ],
+              "correctOptionIds": ["buy", "sell", "pay"],
+              "explanation": "Buy, sell and pay are action verbs. Money is a noun and cheap is an adjective."
+            },
+            {
+              "id": "l05-q14",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"Teachers help students\"?",
+              "options": [
+                { "id": "teachers", "text": "teachers" },
+                { "id": "help", "text": "help" },
+                { "id": "students", "text": "students" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["help"],
+              "explanation": "\"Help\" is the action (verb). \"Teachers\" and \"students\" are nouns, \"the\" an article."
+            },
+            {
+              "id": "l05-q15",
+              "type": "category",
+              "prompt": "Slice the travel verbs.",
+              "options": [
+                { "id": "drive", "text": "drive" },
+                { "id": "fly", "text": "fly" },
+                { "id": "ride", "text": "ride" },
+                { "id": "fast", "text": "fast" },
+                { "id": "road", "text": "road" }
+              ],
+              "correctOptionIds": ["drive", "fly", "ride"],
+              "explanation": "Drive, fly and ride are travel verbs. Fast is an adjective and road is a noun."
+            }
+          ]
+        },
+        {
+          "id": "level-06",
+          "title": "Adjectives & Descriptions",
+          "questions": [
+            {
+              "id": "l06-q01",
+              "type": "category",
+              "prompt": "Slice the adjectives describing people.",
+              "options": [
+                { "id": "tall", "text": "tall" },
+                { "id": "kind", "text": "kind" },
+                { "id": "funny", "text": "funny" },
+                { "id": "tree", "text": "tree" },
+                { "id": "run", "text": "run" }
+              ],
+              "correctOptionIds": ["tall", "kind", "funny"],
+              "explanation": "Tall, kind and funny describe people. Tree is a noun and run is a verb."
+            },
+            {
+              "id": "l06-q02",
+              "type": "category",
+              "prompt": "Slice the adjectives.",
+              "options": [
+                { "id": "big", "text": "big" },
+                { "id": "small", "text": "small" },
+                { "id": "fast", "text": "fast" },
+                { "id": "box", "text": "box" },
+                { "id": "car", "text": "car" }
+              ],
+              "correctOptionIds": ["big", "small", "fast"],
+              "explanation": "Big, small and fast are adjectives. Box and car are nouns."
+            },
+            {
+              "id": "l06-q03",
+              "type": "category",
+              "prompt": "Slice the colors.",
+              "options": [
+                { "id": "red", "text": "red" },
+                { "id": "blue", "text": "blue" },
+                { "id": "green", "text": "green" },
+                { "id": "apple", "text": "apple" },
+                { "id": "sky", "text": "sky" }
+              ],
+              "correctOptionIds": ["red", "blue", "green"],
+              "explanation": "Red, blue and green are colors. Apple and sky are nouns."
+            },
+            {
+              "id": "l06-q04",
+              "type": "category",
+              "prompt": "Slice the colors.",
+              "options": [
+                { "id": "yellow", "text": "yellow" },
+                { "id": "purple", "text": "purple" },
+                { "id": "white", "text": "white" },
+                { "id": "milk", "text": "milk" },
+                { "id": "snow", "text": "snow" }
+              ],
+              "correctOptionIds": ["yellow", "purple", "white"],
+              "explanation": "Yellow, purple and white are colors. Milk and snow are nouns."
+            },
+            {
+              "id": "l06-q05",
+              "type": "category",
+              "prompt": "Slice the adjectives describing food.",
+              "options": [
+                { "id": "sweet", "text": "sweet" },
+                { "id": "sour", "text": "sour" },
+                { "id": "salty", "text": "salty" },
+                { "id": "sugar", "text": "sugar" },
+                { "id": "lemon", "text": "lemon" }
+              ],
+              "correctOptionIds": ["sweet", "sour", "salty"],
+              "explanation": "Sweet, sour and salty describe taste. Sugar and lemon are nouns."
+            },
+            {
+              "id": "l06-q06",
+              "type": "category",
+              "prompt": "Slice the adjectives describing weather.",
+              "options": [
+                { "id": "sunny", "text": "sunny" },
+                { "id": "windy", "text": "windy" },
+                { "id": "cloudy", "text": "cloudy" },
+                { "id": "umbrella", "text": "umbrella" },
+                { "id": "storm", "text": "storm" }
+              ],
+              "correctOptionIds": ["sunny", "windy", "cloudy"],
+              "explanation": "Sunny, windy and cloudy describe weather. Umbrella and storm are nouns."
+            },
+            {
+              "id": "l06-q07",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"She has a red bag\"?",
+              "options": [
+                { "id": "she", "text": "she" },
+                { "id": "red", "text": "red" },
+                { "id": "bag", "text": "bag" },
+                { "id": "has", "text": "has" }
+              ],
+              "correctOptionIds": ["red"],
+              "explanation": "\"Red\" describes the bag, so it is the adjective. \"Bag\" is a noun, \"has\" a verb, \"she\" a pronoun."
+            },
+            {
+              "id": "l06-q08",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"He bought a new phone\"?",
+              "options": [
+                { "id": "bought", "text": "bought" },
+                { "id": "new", "text": "new" },
+                { "id": "phone", "text": "phone" },
+                { "id": "he", "text": "he" }
+              ],
+              "correctOptionIds": ["new"],
+              "explanation": "\"New\" describes the phone, so it is the adjective. \"Phone\" is a noun, \"bought\" a verb, \"he\" a pronoun."
+            },
+            {
+              "id": "l06-q09",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"The soup tastes hot\"?",
+              "options": [
+                { "id": "soup", "text": "soup" },
+                { "id": "tastes", "text": "tastes" },
+                { "id": "hot", "text": "hot" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["hot"],
+              "explanation": "\"Hot\" describes the soup, so it is the adjective. \"Soup\" is a noun, \"tastes\" a verb, \"the\" an article."
+            },
+            {
+              "id": "l06-q10",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"A quiet room helps study\"?",
+              "options": [
+                { "id": "quiet", "text": "quiet" },
+                { "id": "room", "text": "room" },
+                { "id": "helps", "text": "helps" },
+                { "id": "study", "text": "study" }
+              ],
+              "correctOptionIds": ["quiet"],
+              "explanation": "\"Quiet\" describes the room, so it is the adjective. \"Room\" is a noun and \"helps\" is the verb."
+            },
+            {
+              "id": "l06-q11",
+              "type": "category",
+              "prompt": "Slice the adjectives that describe size.",
+              "options": [
+                { "id": "huge", "text": "huge" },
+                { "id": "tiny", "text": "tiny" },
+                { "id": "wide", "text": "wide" },
+                { "id": "elephant", "text": "elephant" },
+                { "id": "ant", "text": "ant" }
+              ],
+              "correctOptionIds": ["huge", "tiny", "wide"],
+              "explanation": "Huge, tiny and wide describe size. Elephant and ant are nouns."
+            },
+            {
+              "id": "l06-q12",
+              "type": "category",
+              "prompt": "Slice the adjectives describing feelings.",
+              "options": [
+                { "id": "happy", "text": "happy" },
+                { "id": "sad", "text": "sad" },
+                { "id": "angry", "text": "angry" },
+                { "id": "smile", "text": "smile" },
+                { "id": "tears", "text": "tears" }
+              ],
+              "correctOptionIds": ["happy", "sad", "angry"],
+              "explanation": "Happy, sad and angry describe feelings. Smile and tears are nouns."
+            },
+            {
+              "id": "l06-q13",
+              "type": "category",
+              "prompt": "Slice the words that mean the opposite of \"big\".",
+              "options": [
+                { "id": "small", "text": "small" },
+                { "id": "tiny", "text": "tiny" },
+                { "id": "mini", "text": "mini" },
+                { "id": "huge", "text": "huge" },
+                { "id": "giant", "text": "giant" }
+              ],
+              "correctOptionIds": ["small", "tiny", "mini"],
+              "explanation": "Small, tiny and mini mean NOT big. Huge and giant mean very big."
+            },
+            {
+              "id": "l06-q14",
+              "type": "category",
+              "prompt": "Slice the adjectives.",
+              "options": [
+                { "id": "clean", "text": "clean" },
+                { "id": "quiet", "text": "quiet" },
+                { "id": "soft", "text": "soft" },
+                { "id": "water", "text": "water" },
+                { "id": "pillow", "text": "pillow" }
+              ],
+              "correctOptionIds": ["clean", "quiet", "soft"],
+              "explanation": "Clean, quiet and soft are adjectives. Water and pillow are nouns."
+            },
+            {
+              "id": "l06-q15",
+              "type": "grammar-identify",
+              "prompt": "Which word is the adjective in: \"They live in a busy city\"?",
+              "options": [
+                { "id": "busy", "text": "busy" },
+                { "id": "city", "text": "city" },
+                { "id": "live", "text": "live" },
+                { "id": "they", "text": "they" }
+              ],
+              "correctOptionIds": ["busy"],
+              "explanation": "\"Busy\" describes the city, so it is the adjective. \"City\" is a noun, \"live\" a verb, \"they\" a pronoun."
+            }
+          ]
+        },
+        {
+          "id": "level-07",
+          "title": "Daily Routines",
+          "questions": [
+            {
+              "id": "l07-q01",
+              "type": "category",
+              "prompt": "Slice the activities people do in the morning.",
+              "options": [
+                { "id": "wake", "text": "wake" },
+                { "id": "wash", "text": "wash" },
+                { "id": "dress", "text": "dress" },
+                { "id": "sleep", "text": "sleep" },
+                { "id": "moon", "text": "moon" }
+              ],
+              "correctOptionIds": ["wake", "wash", "dress"],
+              "explanation": "Waking, washing and dressing happen in the morning. Sleeping is for night and the moon is in the sky."
+            },
+            {
+              "id": "l07-q02",
+              "type": "category",
+              "prompt": "Slice the things people do every day.",
+              "options": [
+                { "id": "eat", "text": "eat" },
+                { "id": "sleep", "text": "sleep" },
+                { "id": "work", "text": "work" },
+                { "id": "volcano", "text": "volcano" },
+                { "id": "ruler", "text": "ruler" }
+              ],
+              "correctOptionIds": ["eat", "sleep", "work"],
+              "explanation": "Eating, sleeping and working are daily activities. Volcano and ruler are things."
+            },
+            {
+              "id": "l07-q03",
+              "type": "sentence-completion",
+              "prompt": "Every morning, I ___ my teeth.",
+              "options": [
+                { "id": "brush", "text": "brush" },
+                { "id": "eat", "text": "eat" },
+                { "id": "drive", "text": "drive" },
+                { "id": "fly", "text": "fly" }
+              ],
+              "correctOptionIds": ["brush"],
+              "explanation": "In English you \"brush your teeth\" — brush is the verb that goes with teeth."
+            },
+            {
+              "id": "l07-q04",
+              "type": "sentence-completion",
+              "prompt": "I ___ up at seven o'clock.",
+              "options": [
+                { "id": "wake", "text": "wake" },
+                { "id": "eat", "text": "eat" },
+                { "id": "sit", "text": "sit" },
+                { "id": "play", "text": "play" }
+              ],
+              "correctOptionIds": ["wake"],
+              "explanation": "\"Wake up\" is the routine expression for stopping sleep. You do not eat up or sit up at seven as a routine."
+            },
+            {
+              "id": "l07-q05",
+              "type": "sentence-completion",
+              "prompt": "After school, I ___ my homework.",
+              "options": [
+                { "id": "do", "text": "do" },
+                { "id": "drink", "text": "drink" },
+                { "id": "fly", "text": "fly" },
+                { "id": "cut", "text": "cut" }
+              ],
+              "correctOptionIds": ["do"],
+              "explanation": "In English you \"do your homework\" — do is the verb that goes with homework."
+            },
+            {
+              "id": "l07-q06",
+              "type": "category",
+              "prompt": "Slice the evening activities.",
+              "options": [
+                { "id": "read", "text": "read" },
+                { "id": "relax", "text": "relax" },
+                { "id": "cook", "text": "cook" },
+                { "id": "sun", "text": "sun" },
+                { "id": "noon", "text": "noon" }
+              ],
+              "correctOptionIds": ["read", "relax", "cook"],
+              "explanation": "Reading, relaxing and cooking are evening activities. Sun and noon belong to the day."
+            },
+            {
+              "id": "l07-q07",
+              "type": "category",
+              "prompt": "Slice the weekend activities.",
+              "options": [
+                { "id": "shop", "text": "shop" },
+                { "id": "hike", "text": "hike" },
+                { "id": "visit", "text": "visit" },
+                { "id": "office", "text": "office" },
+                { "id": "meeting", "text": "meeting" }
+              ],
+              "correctOptionIds": ["shop", "hike", "visit"],
+              "explanation": "Shopping, hiking and visiting are weekend activities. Office and meeting belong to work days."
+            },
+            {
+              "id": "l07-q08",
+              "type": "sentence-completion",
+              "prompt": "At night, I ___ a story before sleep.",
+              "options": [
+                { "id": "read", "text": "read" },
+                { "id": "eat", "text": "eat" },
+                { "id": "run", "text": "run" },
+                { "id": "sell", "text": "sell" }
+              ],
+              "correctOptionIds": ["read"],
+              "explanation": "You \"read a story\" — read is the verb that goes with story."
+            },
+            {
+              "id": "l07-q09",
+              "type": "sentence-completion",
+              "prompt": "She ___ the bus to work.",
+              "options": [
+                { "id": "takes", "text": "takes" },
+                { "id": "makes", "text": "makes" },
+                { "id": "drinks", "text": "drinks" },
+                { "id": "lifts", "text": "lifts" }
+              ],
+              "correctOptionIds": ["takes"],
+              "explanation": "You \"take the bus\" — take is the verb that goes with bus."
+            },
+            {
+              "id": "l07-q10",
+              "type": "category",
+              "prompt": "Slice the daily routine verbs.",
+              "options": [
+                { "id": "wake", "text": "wake" },
+                { "id": "brush", "text": "brush" },
+                { "id": "commute", "text": "commute" },
+                { "id": "dream", "text": "dream" },
+                { "id": "cloud", "text": "cloud" }
+              ],
+              "correctOptionIds": ["wake", "brush", "commute"],
+              "explanation": "Wake, brush and commute are routine verbs. Dream happens while sleeping and cloud is a noun."
+            },
+            {
+              "id": "l07-q11",
+              "type": "sentence-completion",
+              "prompt": "First I wash, then I ___, and finally I eat breakfast.",
+              "options": [
+                { "id": "dress", "text": "dress" },
+                { "id": "sleep", "text": "sleep" },
+                { "id": "swim", "text": "swim" },
+                { "id": "dream", "text": "dream" }
+              ],
+              "correctOptionIds": ["dress"],
+              "explanation": "The natural morning order is wash, dress, then breakfast. Sleeping or swimming would not fit before breakfast."
+            },
+            {
+              "id": "l07-q12",
+              "type": "sentence-completion",
+              "prompt": "We ___ the table before dinner.",
+              "options": [
+                { "id": "set", "text": "set" },
+                { "id": "lift", "text": "lift" },
+                { "id": "eat", "text": "eat" },
+                { "id": "watch", "text": "watch" }
+              ],
+              "correctOptionIds": ["set"],
+              "explanation": "\"Set the table\" is the expression for preparing the table for a meal."
+            },
+            {
+              "id": "l07-q13",
+              "type": "category",
+              "prompt": "Slice the hygiene actions.",
+              "options": [
+                { "id": "wash", "text": "wash" },
+                { "id": "brush", "text": "brush" },
+                { "id": "rinse", "text": "rinse" },
+                { "id": "dirty", "text": "dirty" },
+                { "id": "towel", "text": "towel" }
+              ],
+              "correctOptionIds": ["wash", "brush", "rinse"],
+              "explanation": "Wash, brush and rinse are hygiene actions. Dirty is an adjective and towel is a thing."
+            },
+            {
+              "id": "l07-q14",
+              "type": "sentence-completion",
+              "prompt": "I never ___ coffee at night.",
+              "options": [
+                { "id": "drink", "text": "drink" },
+                { "id": "bakes", "text": "bakes" },
+                { "id": "cuts", "text": "cuts" },
+                { "id": "eats", "text": "eats" }
+              ],
+              "correctOptionIds": ["drink"],
+              "explanation": "You \"drink coffee\" — and after \"I never\" the base form drink is correct."
+            },
+            {
+              "id": "l07-q15",
+              "type": "category",
+              "prompt": "Slice the routine words about time.",
+              "options": [
+                { "id": "morning", "text": "morning" },
+                { "id": "evening", "text": "evening" },
+                { "id": "noon", "text": "noon" },
+                { "id": "banana", "text": "banana" },
+                { "id": "chair", "text": "chair" }
+              ],
+              "correctOptionIds": ["morning", "evening", "noon"],
+              "explanation": "Morning, evening and noon are times of day. Banana is food and chair is furniture."
+            }
+          ]
+        },
+        {
+          "id": "level-08",
+          "title": "Basic Grammar",
+          "questions": [
+            {
+              "id": "l08-q01",
+              "type": "sentence-completion",
+              "prompt": "She ___ to school every day.",
+              "options": [
+                { "id": "go", "text": "go" },
+                { "id": "goes", "text": "goes" },
+                { "id": "going", "text": "going" },
+                { "id": "went", "text": "went" }
+              ],
+              "correctOptionIds": ["goes"],
+              "explanation": "With he/she/it in the present simple, the verb takes -s: she goes."
+            },
+            {
+              "id": "l08-q02",
+              "type": "sentence-completion",
+              "prompt": "Yesterday, I ___ to the park.",
+              "options": [
+                { "id": "went", "text": "went" },
+                { "id": "go", "text": "go" },
+                { "id": "going", "text": "going" },
+                { "id": "goes", "text": "goes" }
+              ],
+              "correctOptionIds": ["went"],
+              "explanation": "\"Yesterday\" signals the past, so the past form went is correct."
+            },
+            {
+              "id": "l08-q03",
+              "type": "sentence-completion",
+              "prompt": "They ___ football on Sundays.",
+              "options": [
+                { "id": "play", "text": "play" },
+                { "id": "plays", "text": "plays" },
+                { "id": "playing", "text": "playing" },
+                { "id": "played", "text": "played" }
+              ],
+              "correctOptionIds": ["play"],
+              "explanation": "With they in the present simple, the verb has no -s: they play."
+            },
+            {
+              "id": "l08-q04",
+              "type": "sentence-completion",
+              "prompt": "He ___ like spicy food.",
+              "options": [
+                { "id": "doesnt", "text": "doesn't" },
+                { "id": "dont", "text": "don't" },
+                { "id": "isnt", "text": "isn't" },
+                { "id": "arent", "text": "aren't" }
+              ],
+              "correctOptionIds": ["doesnt"],
+              "explanation": "With he, the negative is \"doesn't\". \"Don't\" is used with I/you/we/they."
+            },
+            {
+              "id": "l08-q05",
+              "type": "sentence-completion",
+              "prompt": "I ___ a student.",
+              "options": [
+                { "id": "am", "text": "am" },
+                { "id": "is", "text": "is" },
+                { "id": "are", "text": "are" },
+                { "id": "be", "text": "be" }
+              ],
+              "correctOptionIds": ["am"],
+              "explanation": "\"I\" always goes with \"am\": I am a student."
+            },
+            {
+              "id": "l08-q06",
+              "type": "grammar-identify",
+              "prompt": "Which word is the noun in: \"The quick fox jumps\"?",
+              "options": [
+                { "id": "quick", "text": "quick" },
+                { "id": "fox", "text": "fox" },
+                { "id": "jumps", "text": "jumps" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["fox"],
+              "explanation": "\"Fox\" is the thing (noun). \"Quick\" is an adjective, \"jumps\" a verb, \"the\" an article."
+            },
+            {
+              "id": "l08-q07",
+              "type": "sentence-completion",
+              "prompt": "We ___ happy today.",
+              "options": [
+                { "id": "are", "text": "are" },
+                { "id": "is", "text": "is" },
+                { "id": "am", "text": "am" },
+                { "id": "be", "text": "be" }
+              ],
+              "correctOptionIds": ["are"],
+              "explanation": "\"We\" always goes with \"are\": we are happy."
+            },
+            {
+              "id": "l08-q08",
+              "type": "sentence-completion",
+              "prompt": "My sister ___ TV in the evening.",
+              "options": [
+                { "id": "watches", "text": "watches" },
+                { "id": "watch", "text": "watch" },
+                { "id": "watching", "text": "watching" },
+                { "id": "watched", "text": "watched" }
+              ],
+              "correctOptionIds": ["watches"],
+              "explanation": "My sister = she, and verbs ending in -ch take -es in the present simple: watches."
+            },
+            {
+              "id": "l08-q09",
+              "type": "sentence-completion",
+              "prompt": "There ___ two cats on the sofa.",
+              "options": [
+                { "id": "are", "text": "are" },
+                { "id": "is", "text": "is" },
+                { "id": "was", "text": "was" },
+                { "id": "be", "text": "be" }
+              ],
+              "correctOptionIds": ["are"],
+              "explanation": "\"Two cats\" is plural, so \"there are\" is correct."
+            },
+            {
+              "id": "l08-q10",
+              "type": "grammar-identify",
+              "prompt": "Which word is the verb in: \"The baby cries loudly\"?",
+              "options": [
+                { "id": "baby", "text": "baby" },
+                { "id": "cries", "text": "cries" },
+                { "id": "loudly", "text": "loudly" },
+                { "id": "the", "text": "the" }
+              ],
+              "correctOptionIds": ["cries"],
+              "explanation": "\"Cries\" is the action (verb). \"Baby\" is a noun, \"loudly\" an adverb, \"the\" an article."
+            },
+            {
+              "id": "l08-q11",
+              "type": "sentence-completion",
+              "prompt": "I ___ my keys yesterday.",
+              "options": [
+                { "id": "lost", "text": "lost" },
+                { "id": "lose", "text": "lose" },
+                { "id": "losing", "text": "losing" },
+                { "id": "loses", "text": "loses" }
+              ],
+              "correctOptionIds": ["lost"],
+              "explanation": "\"Yesterday\" signals the past, so the past form lost is correct."
+            },
+            {
+              "id": "l08-q12",
+              "type": "sentence-completion",
+              "prompt": "___ you like pizza?",
+              "options": [
+                { "id": "do", "text": "Do" },
+                { "id": "does", "text": "Does" },
+                { "id": "is", "text": "Is" },
+                { "id": "are", "text": "Are" }
+              ],
+              "correctOptionIds": ["do"],
+              "explanation": "Questions with \"you\" use \"Do\": Do you like pizza?"
+            },
+            {
+              "id": "l08-q13",
+              "type": "sentence-completion",
+              "prompt": "She ___ three languages.",
+              "options": [
+                { "id": "speaks", "text": "speaks" },
+                { "id": "speak", "text": "speak" },
+                { "id": "speaking", "text": "speaking" },
+                { "id": "spoke", "text": "spoke" }
+              ],
+              "correctOptionIds": ["speaks"],
+              "explanation": "With she in the present simple, the verb takes -s: speaks."
+            },
+            {
+              "id": "l08-q14",
+              "type": "grammar-identify",
+              "prompt": "Which word is the noun in: \"He drives an old car\"?",
+              "options": [
+                { "id": "drives", "text": "drives" },
+                { "id": "old", "text": "old" },
+                { "id": "car", "text": "car" },
+                { "id": "he", "text": "he" }
+              ],
+              "correctOptionIds": ["car"],
+              "explanation": "\"Car\" is the thing (noun). \"Drives\" is a verb, \"old\" an adjective, \"he\" a pronoun."
+            },
+            {
+              "id": "l08-q15",
+              "type": "sentence-completion",
+              "prompt": "The sun ___ in the east.",
+              "options": [
+                { "id": "rises", "text": "rises" },
+                { "id": "rise", "text": "rise" },
+                { "id": "rising", "text": "rising" },
+                { "id": "rose", "text": "rose" }
+              ],
+              "correctOptionIds": ["rises"],
+              "explanation": "The sun = it, so the present simple takes -s: the sun rises."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,12 +1,13 @@
 /**
  * Word Slice — browser layer.
  *
- * Connects the pure engine (js/engine.js) to the DOM: loads and validates
- * lesson data, renders engine state with PNG fruit sprites and slicing FX,
- * converts pointer input into swipe segments in playfield coordinates, runs
- * the single animation loop, and handles pause/visibility/resize recovery
- * and local progress storage. The engine is the only source of gameplay
- * truth — this file never infers game state from the DOM.
+ * Connects the pure engine (js/engine.js) to the DOM through the level
+ * system (js/levels.js) and progress store (js/progress.js): loads and
+ * validates the level data pack, renders the menu / level select / game
+ * screens, draws engine state with PNG fruit sprites and slicing FX,
+ * converts pointer input into slice segments, runs the single animation
+ * loop, and handles pause/visibility/resize recovery plus local progress
+ * persistence. The engine remains the only source of gameplay truth.
  */
 import {
   WordSliceEngine,
@@ -14,6 +15,28 @@ import {
   TUNING,
   ENGINE_STATES,
 } from './engine.js';
+import {
+  LEVELS,
+  STAGES,
+  levelsByStage,
+  levelById,
+  stageById,
+  nextLevel,
+  tuningOverridesFor,
+  starsFor,
+  validateLevelsPack,
+} from './levels.js';
+import {
+  ACHIEVEMENTS,
+  STORAGE_KEY,
+  readProgress,
+  writeProgress,
+  isLevelUnlocked,
+  continueTarget,
+  totalStars,
+  passedLevelCount,
+  recordLevelResult,
+} from './progress.js';
 
 /* ------------------------------------------------------------------ */
 /* DOM references                                                      */
@@ -25,6 +48,7 @@ const screens = {
   loading: $('screen-loading'),
   error: $('screen-error'),
   menu: $('screen-menu'),
+  levels: $('screen-levels'),
   game: $('screen-game'),
   feedback: $('screen-feedback'),
   results: $('screen-results'),
@@ -33,19 +57,32 @@ const screens = {
 const els = {
   errorText: $('error-text'),
   btnRetry: $('btn-retry'),
-  menuLessonTitle: $('menu-lesson-title'),
-  menuLessonMeta: $('menu-lesson-meta'),
   menuBest: $('menu-best'),
   btnPlay: $('btn-play'),
+  btnPlayLabel: $('btn-play-label'),
+  btnMenuHome: $('btn-menu-home'),
+  btnMenuLevels: $('btn-menu-levels'),
   btnMenuHow: $('btn-menu-how'),
-  btnHeroHow: $('btn-hero-how'),
   btnMenuSettings: $('btn-menu-settings'),
+  btnHeroLevels: $('btn-hero-levels'),
+  btnHeroHow: $('btn-hero-how'),
+  btnLevelsHome: $('btn-levels-home'),
+  btnLevelsLevels: $('btn-levels-levels'),
+  btnLevelsHow: $('btn-levels-how'),
+  btnLevelsSettings: $('btn-levels-settings'),
+  levelsProgress: $('levels-progress'),
+  levelsList: $('levels-list'),
   menuHowOverlay: $('menu-how-overlay'),
   btnMenuHowClose: $('btn-menu-how-close'),
   settingsOverlay: $('settings-overlay'),
   btnSettingsClose: $('btn-settings-close'),
   btnSettingsHow: $('btn-settings-how'),
   btnResetBest: $('btn-reset-best'),
+  achievementsList: $('achievements-list'),
+  tutorialOverlay: $('tutorial-overlay'),
+  tutorialSteps: $('tutorial-steps'),
+  btnTutorialSkip: $('btn-tutorial-skip'),
+  btnTutorialNext: $('btn-tutorial-next'),
   gameToast: $('game-toast'),
   hudQuestion: $('hud-question'),
   hudProgressFill: $('hud-progress-fill'),
@@ -74,9 +111,7 @@ const els = {
   btnResume: $('btn-resume'),
   btnRestart: $('btn-restart'),
   btnQuit: $('btn-quit'),
-  pwSlow: $('pw-slow'),
-  pwAuto: $('pw-auto'),
-  pwShield: $('pw-shield'),
+  pwHelp: $('pw-help'),
   pwSettings: $('pw-settings'),
   fbProgress: $('fb-progress'),
   fbTitle: $('fb-title'),
@@ -91,6 +126,7 @@ const els = {
   rsSubtitle: $('rs-subtitle'),
   rsStats: $('rs-stats'),
   rsReview: $('rs-review'),
+  btnNextLevel: $('btn-next-level'),
   btnAgain: $('btn-again'),
   btnMenu: $('btn-menu'),
 };
@@ -116,7 +152,11 @@ const FRUIT_APPEARANCES = {
 const appearanceImages = new Map();
 
 function preloadAppearanceImages() {
-  for (const [id, files] of Object.entries(FRUIT_APPEARANCES)) {
+  // Only the engine's answer pool needs decode-warm sprites; the rest of
+  // the map stays available for menu/tutorial decoration art.
+  for (const id of TUNING.APPEARANCES) {
+    const files = FRUIT_APPEARANCES[id];
+    if (!files) continue;
     const entry = {};
     for (const kind of ['whole', 'cut']) {
       const img = new Image();
@@ -131,59 +171,17 @@ function preloadAppearanceImages() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Local progress storage (guarded, versioned, best-effort)            */
-/* ------------------------------------------------------------------ */
-
-const STORAGE_KEY = 'word-slice:v1:progress';
-
-function readProgress() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { lessons: {} };
-    const data = JSON.parse(raw);
-    if (data && typeof data === 'object' && data.lessons && typeof data.lessons === 'object') {
-      return data;
-    }
-  } catch {
-    /* storage unavailable or corrupt — play without it */
-  }
-  return { lessons: {} };
-}
-
-function writeProgress(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    /* ignore write failures (private mode, quota) */
-  }
-}
-
-function recordSessionResult(report) {
-  const progress = readProgress();
-  const current = progress.lessons[report.lessonId] || { bestScore: 0, plays: 0, last: null };
-  current.bestScore = Math.max(Number(current.bestScore) || 0, report.score);
-  current.plays = (Number(current.plays) || 0) + 1;
-  current.last = {
-    at: new Date().toISOString(),
-    score: report.score,
-    successfulRounds: report.successfulRounds,
-    completedRounds: report.completedRounds,
-    endedEarly: report.endedEarly,
-  };
-  progress.lessons[report.lessonId] = current;
-  writeProgress(progress);
-}
-
-/* ------------------------------------------------------------------ */
 /* Application state                                                   */
 /* ------------------------------------------------------------------ */
 
-/** LOADING → MENU ⇄ GAME (with ERROR recoverable from loading). */
+/** LOADING → MENU ⇄ LEVELS ⇄ GAME (with ERROR recoverable from loading). */
 let appState = 'LOADING';
-let bank = null;
-let currentLesson = null;
+let levelQuestions = null; // levelId -> questions array (validated pack)
+let currentLevel = null;   // manifest entry of the level being played
 let engine = null;
-/** Best stored score for the current lesson (side panel). */
+/** Live v2 progress cache; the single source for unlock/star UI. */
+let progress = null;
+/** Best stored score for the current level (side panel). */
 let sessionBestScore = 0;
 /** Set when an app-level overlay (how-to / settings) paused the engine. */
 let overlayPausedByUs = false;
@@ -192,14 +190,15 @@ function setScreen(name) {
   for (const [key, section] of Object.entries(screens)) {
     section.hidden = key !== name;
   }
-  appState = name === 'feedback' || name === 'results' ? 'GAME' : name.toUpperCase();
+  appState = ['game', 'feedback', 'results'].includes(name) ? 'GAME' : name.toUpperCase();
 }
 
 /* ------------------------------------------------------------------ */
-/* Toast + app-level overlays (menu how-to, settings)                  */
+/* Toast + app-level overlays                                          */
 /* ------------------------------------------------------------------ */
 
 let toastTimerId = null;
+let toastQueue = [];
 
 function showToast(text) {
   els.gameToast.textContent = text;
@@ -208,7 +207,19 @@ function showToast(text) {
   toastTimerId = setTimeout(() => {
     els.gameToast.hidden = true;
     toastTimerId = null;
-  }, 2200);
+    playNextQueuedToast();
+  }, 2400);
+}
+
+/** Achievement toasts arrive in a burst; show them one after another. */
+function queueAchievementToasts(list) {
+  toastQueue.push(...list.map((a) => `🏆 Achievement: ${a.name}`));
+  if (toastTimerId === null && els.gameToast.hidden) playNextQueuedToast();
+}
+
+function playNextQueuedToast() {
+  const next = toastQueue.shift();
+  if (next) showToast(next);
 }
 
 /** App overlays pause live gameplay while they are open. */
@@ -234,64 +245,302 @@ function closeAppOverlay(overlayEl) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Data loading                                                        */
+/* Level data loading                                                  */
 /* ------------------------------------------------------------------ */
 
 let loadAttempt = 0;
 
-async function loadBank() {
+async function loadLevelPack() {
   const attempt = ++loadAttempt;
   setScreen('loading');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch('data/questions.json', { signal: controller.signal, cache: 'no-store' });
+    const files = ['stage-1.json', 'stage-2.json', 'stage-3.json'];
+    const responses = await Promise.all(files.map((f) =>
+      fetch(`data/levels/${f}`, { signal: controller.signal, cache: 'no-store' })));
     if (attempt !== loadAttempt) return; // superseded by a newer retry
-    if (!response.ok) throw new Error(`server returned ${response.status}`);
-    const data = await response.json();
-    if (attempt !== loadAttempt) return;
-    const validation = validateQuestionBank(data);
-    if (!validation.ok) {
-      throw new Error(`lesson data is invalid — ${validation.errors.slice(0, 3).join(' | ')}`);
+    for (const response of responses) {
+      if (!response.ok) throw new Error(`server returned ${response.status} for a level file`);
     }
-    bank = data;
+    const pack = { schemaVersion: 2, stages: [] };
+    for (const response of responses) {
+      const data = await response.json();
+      if (attempt !== loadAttempt) return;
+      pack.stages.push(...data.stages);
+    }
+    const validation = validateLevelsPack(pack);
+    if (!validation.ok) {
+      throw new Error(`level data is invalid — ${validation.errors.slice(0, 3).join(' | ')}`);
+    }
+    levelQuestions = new Map();
+    for (const stage of pack.stages) {
+      for (const level of stage.levels) {
+        levelQuestions.set(level.id, level.questions);
+      }
+    }
     renderMenu();
   } catch (err) {
     if (attempt !== loadAttempt) return;
-    bank = null;
+    levelQuestions = null;
     const reason = err && err.name === 'AbortError' ? 'the request timed out' : err.message || 'network error';
-    els.errorText.textContent = `Could not load the lesson (${reason}). Check that the dev server is running, then retry.`;
+    els.errorText.textContent = `Could not load the levels (${reason}). Check that the dev server is running, then retry.`;
     setScreen('error');
   } finally {
     clearTimeout(timeout);
   }
 }
 
+/** Manifest entry + questions combined into an engine-ready lesson. */
+function lessonFor(level) {
+  const questions = levelQuestions && levelQuestions.get(level.id);
+  if (!questions) return null;
+  return { id: level.id, title: level.title, questions };
+}
+
 /* ------------------------------------------------------------------ */
-/* Menu                                                                */
+/* Menu + level select                                                 */
 /* ------------------------------------------------------------------ */
 
 function renderMenu() {
-  const lesson = bank && bank.lessons[0];
-  if (!lesson) {
-    els.errorText.textContent = 'No lessons available.';
+  if (!levelQuestions) {
+    els.errorText.textContent = 'No levels available.';
     setScreen('error');
     return;
   }
-  currentLesson = lesson;
-  els.menuLessonTitle.textContent = lesson.title;
-  els.menuLessonMeta.textContent =
-    `${lesson.proposedCefrLevel || ''} · ${lesson.questions.length} questions · ${TUNING.SESSION_QUESTIONS} per session`.replace(/^ · /, '');
-  const stored = readProgress().lessons[lesson.id];
-  const bits = [];
-  if (stored && stored.bestScore > 0) bits.push(`Best score: ${stored.bestScore}`);
-  if (stored && stored.last) {
-    const how = stored.last.endedEarly ? 'ended early' : 'completed';
-    bits.push(`Last session: ${how}, ${stored.last.successfulRounds} clear rounds (score ${stored.last.score})`);
-  }
-  els.menuBest.textContent = bits.join(' · ');
-  els.btnPlay.disabled = false;
+  const target = continueTarget(progress);
+  const playedAny = passedLevelCount(progress) > 0 || Object.keys(progress.levels).length > 0;
+  els.btnPlayLabel.textContent = playedAny ? `Continue · Level ${target.order}` : 'Play';
+  const stars = totalStars(progress);
+  const passed = passedLevelCount(progress);
+  els.menuBest.textContent = `${passed}/${LEVELS.length} levels passed · ${stars}/${LEVELS.length * 3} stars`;
   setScreen('menu');
+}
+
+function starRow(bestStars) {
+  let out = '';
+  for (let i = 0; i < 3; i++) {
+    out += i < bestStars ? '⭐' : '<span class="star-off">⭐</span>';
+  }
+  return out;
+}
+
+function renderLevels() {
+  if (!levelQuestions) return;
+  const target = continueTarget(progress);
+  els.levelsProgress.textContent = `${passedLevelCount(progress)}/${LEVELS.length} passed · ${totalStars(progress)} stars`;
+  els.levelsList.replaceChildren();
+
+  for (const { stage, levels } of levelsByStage()) {
+    const block = document.createElement('div');
+    block.className = 'stage-block';
+
+    const header = document.createElement('div');
+    header.className = 'stage-header';
+    const name = document.createElement('span');
+    name.className = 'stage-name';
+    name.textContent = stage.name;
+    const cefr = document.createElement('span');
+    cefr.className = 'stage-cefr';
+    cefr.textContent = stage.cefr;
+    const desc = document.createElement('span');
+    desc.className = 'stage-desc';
+    desc.textContent = stage.description;
+    header.append(name, cefr, desc);
+
+    const grid = document.createElement('div');
+    grid.className = 'stage-grid';
+
+    for (const level of levels) {
+      const rec = progress.levels[level.id];
+      const unlocked = isLevelUnlocked(progress, level.id);
+      const passed = Boolean(rec && rec.passed);
+
+      const card = document.createElement('div');
+      card.className = 'level-card' + (unlocked ? '' : ' is-locked') + (level.id === target.id ? ' is-next' : '');
+
+      const top = document.createElement('div');
+      top.className = 'level-top';
+      const num = document.createElement('span');
+      num.className = 'level-number';
+      num.textContent = String(level.order);
+      const title = document.createElement('span');
+      title.className = 'level-title';
+      title.textContent = level.title;
+      top.append(num, title);
+
+      const topic = document.createElement('p');
+      topic.className = 'level-topic';
+      topic.textContent = level.topic;
+
+      const starsEl = document.createElement('div');
+      starsEl.className = 'level-stars';
+      starsEl.innerHTML = starRow(rec ? rec.bestStars : 0);
+
+      card.append(top, topic, starsEl);
+
+      if (unlocked) {
+        const best = document.createElement('div');
+        best.className = 'level-best';
+        best.textContent = rec && rec.bestScore > 0 ? `Best score: ${rec.bestScore}` : 'Not played yet';
+        card.append(best);
+        const play = document.createElement('button');
+        play.type = 'button';
+        play.className = 'level-play';
+        play.textContent = passed ? 'Play again' : 'Play';
+        play.setAttribute('aria-label', `Play level ${level.order}: ${level.title}`);
+        play.addEventListener('click', () => beginLevel(level));
+        card.append(play);
+        if (level.id === target.id) {
+          const badge = document.createElement('span');
+          badge.className = 'level-badge-next';
+          badge.textContent = 'Next';
+          card.append(badge);
+        }
+      } else {
+        const lock = document.createElement('div');
+        lock.className = 'level-lock';
+        lock.textContent = '🔒 Pass the previous level to unlock';
+        card.append(lock);
+      }
+      grid.append(card);
+    }
+    block.append(header, grid);
+    els.levelsList.append(block);
+  }
+  setScreen('levels');
+}
+
+function openLevelsScreen() {
+  renderLevels();
+}
+
+/* ------------------------------------------------------------------ */
+/* Tutorial (first play; skippable; one practice swipe)                */
+/* ------------------------------------------------------------------ */
+
+const TUTORIAL_STEPS = [
+  {
+    title: '1 · Read the question',
+    img: 'assets/fruits/sprites/uncuted/watermelon.png',
+    text: 'Every round shows a challenge on the parchment banner, like "Slice the fruits.".',
+  },
+  {
+    practice: true,
+    title: '2 · Slice the matching fruit',
+    fruit: 'apple',
+    fruitImg: 'assets/fruits/sprites/uncuted/apple.png',
+    cutImg: 'assets/fruits/sprites/cuted/apple.png',
+    text: 'Drag across the fruit carrying a word that matches. Try it: swipe through this apple!',
+  },
+  {
+    title: '3 · Leave other fruits alone',
+    img: 'assets/fruits/sprites/uncuted/strawberry.png',
+    label: 'table',
+    text: 'This strawberry says "table" — not a fruit. Slicing wrong words costs a heart, so let it fly by.',
+  },
+  {
+    title: 'Ready to play!',
+    text: 'You have 3 hearts, 10 questions per level, and stars for 8–10 clear rounds. Good luck!',
+  },
+];
+
+let tutorialIndex = 0;
+let tutorialPracticeDone = false;
+let tutorialPendingLevel = null;
+
+function renderTutorialStep() {
+  const step = TUTORIAL_STEPS[tutorialIndex];
+  els.tutorialSteps.replaceChildren();
+  tutorialPracticeDone = false;
+  els.btnTutorialNext.textContent = tutorialIndex === TUTORIAL_STEPS.length - 1 ? 'Start playing' : 'Next';
+
+  const view = document.createElement('div');
+  view.className = 'tutorial-step is-active';
+
+  const h3 = document.createElement('h3');
+  h3.textContent = step.title;
+  view.append(h3);
+
+  if (step.practice) {
+    const demo = document.createElement('div');
+    demo.className = 'tutorial-fruit-demo';
+    const img = document.createElement('img');
+    img.src = step.fruitImg;
+    img.alt = '';
+    img.draggable = false;
+    const label = document.createElement('span');
+    label.className = 'fruit-label';
+    label.textContent = step.fruit;
+    const blade = document.createElement('i');
+    blade.className = 'demo-blade';
+    demo.append(img, label, blade);
+
+    let startX = null;
+    let startY = null;
+    const MIN = 24;
+    const onDown = (ev) => {
+      startX = ev.clientX;
+      startY = ev.clientY;
+      ev.preventDefault();
+    };
+    const onMove = (ev) => {
+      if (startX === null || tutorialPracticeDone) return;
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) >= MIN) {
+        tutorialPracticeDone = true;
+        img.src = step.cutImg; // the same cut artwork used in gameplay
+        blade.remove();
+        const hint = document.createElement('p');
+        hint.className = 'tutorial-hint';
+        hint.textContent = 'Nice slice! Tap Next.';
+        view.append(hint);
+      }
+    };
+    const onUp = () => { startX = null; };
+    demo.addEventListener('pointerdown', onDown);
+    demo.addEventListener('pointermove', onMove);
+    demo.addEventListener('pointerup', onUp);
+    demo.addEventListener('pointerleave', onUp);
+    view.append(demo);
+  } else if (step.img) {
+    const img = document.createElement('img');
+    img.src = step.img;
+    img.alt = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'tutorial-fruit-demo';
+    wrap.style.cursor = 'default';
+    wrap.append(img);
+    if (step.label) {
+      const label = document.createElement('span');
+      label.className = 'fruit-label';
+      label.textContent = step.label;
+      wrap.append(label);
+    }
+    view.append(wrap);
+  }
+
+  const p = document.createElement('p');
+  p.textContent = step.text;
+  view.append(p);
+  els.tutorialSteps.append(view);
+}
+
+function openTutorial(pendingLevel) {
+  tutorialPendingLevel = pendingLevel;
+  tutorialIndex = 0;
+  renderTutorialStep();
+  els.tutorialOverlay.hidden = false;
+}
+
+function finishTutorial() {
+  els.tutorialOverlay.hidden = true;
+  if (!progress.tutorialDone) {
+    progress = { ...progress, tutorialDone: true };
+    writeProgress(window.localStorage, progress);
+  }
+  const level = tutorialPendingLevel;
+  tutorialPendingLevel = null;
+  if (level) startGame(level);
 }
 
 /* ------------------------------------------------------------------ */
@@ -376,9 +625,9 @@ let lastSliceDir = { x: 1, y: 0 };
  * Sprites are trimmed to the fruit body, so the box scales from the
  * engine's collision radius. Each fruit carries its own `scale`: round
  * fruits sit at ~1.04 (a hair larger than the collision circle so the
- * silhouette reads cleanly), while elongated shapes (banana, pineapple,
- * pear) go larger so their thin axes still feel sliceable — the circle
- * itself always comes from the engine and is never inflated here.
+ * silhouette reads cleanly), while elongated shapes go larger so their
+ * thin axes still feel sliceable — the circle itself always comes from
+ * the engine and is never inflated here.
  */
 function spriteBoxFor(fruit) {
   const art = FRUIT_APPEARANCES[fruit.appearanceId];
@@ -672,7 +921,6 @@ function processEngineEvents() {
         showFeedback(event.report);
         break;
       case 'sessionEnded':
-        recordSessionResult(event.report);
         showResults(event.report);
         break;
       case 'roundRecovered':
@@ -695,7 +943,7 @@ function refreshView() {
   const state = engine.state;
   const inGame = appState === 'GAME';
   // An open app overlay sits above everything and owns the pause.
-  const appOverlayOpen = !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden;
+  const appOverlayOpen = !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden || !els.tutorialOverlay.hidden;
   els.readyOverlay.hidden = !(inGame && state === ENGINE_STATES.ROUND_READY && !appOverlayOpen);
   els.pauseOverlay.hidden = !(inGame && state === ENGINE_STATES.PAUSED && !appOverlayOpen);
   els.btnPause.disabled = state !== ENGINE_STATES.PLAYING;
@@ -750,31 +998,7 @@ function showFeedback(report) {
   clearGesture();
 }
 
-/**
- * Stars are earned, never decorative: one for finishing, a second for
- * passing, a third only for a flawless (no wrong, no missed) pass.
- */
-function earnedStars(report) {
-  if (!report.completed) return 0;
-  let stars = 1;
-  if (report.passStatus === 'passed') stars = 2;
-  if (report.passStatus === 'passed' && report.wrongSlices === 0 && report.missedTargets === 0) stars = 3;
-  return stars;
-}
-
-function showResults(report) {
-  els.rsTitle.textContent = report.completed ? 'Lesson complete!' : 'Session ended early';
-  let subtitle;
-  if (!report.completed) {
-    subtitle = 'You ran out of hearts. The lesson was not completed.';
-  } else if (report.passStatus === 'passed') {
-    subtitle = `Passed — ${report.successfulRounds} of ${report.totalRounds} rounds clear.`;
-  } else {
-    subtitle = `Keep practicing — ${report.successfulRounds} of ${report.totalRounds} rounds clear. You need ${TUNING.PASS_SUCCESSFUL_ROUNDS} to pass.`;
-  }
-  els.rsSubtitle.textContent = subtitle;
-
-  const stars = earnedStars(report);
+function renderStars(stars) {
   els.rsStars.replaceChildren();
   for (let i = 0; i < 3; i++) {
     const star = document.createElement('span');
@@ -782,6 +1006,40 @@ function showResults(report) {
     star.textContent = '⭐';
     els.rsStars.append(star);
   }
+}
+
+function showResults(report) {
+  const stars = starsFor(report);
+  els.rsTitle.textContent = report.completed ? 'Level complete!' : 'Session ended early';
+  let subtitle;
+  if (!report.completed) {
+    subtitle = 'You ran out of hearts. The level was not completed.';
+  } else if (report.passStatus === 'passed') {
+    subtitle = `Passed — ${report.successfulRounds} of ${report.totalRounds} rounds clear.`;
+  } else {
+    subtitle = `Keep practicing — ${report.successfulRounds} of ${report.totalRounds} rounds clear. You need ${TUNING.PASS_SUCCESSFUL_ROUNDS} to pass.`;
+  }
+  els.rsSubtitle.textContent = subtitle;
+  renderStars(stars);
+
+  // Record progress (stars, unlocks, achievements) against the level.
+  const { progress: updated, newlyEarned } = recordLevelResult(progress, report.lessonId, {
+    completed: report.completed,
+    passStatus: report.passStatus,
+    score: report.score,
+    successfulRounds: report.successfulRounds,
+    endedEarly: report.endedEarly,
+    bestStreak: report.bestStreak,
+    stars,
+  }, new Date().toISOString());
+  progress = updated;
+  writeProgress(window.localStorage, progress);
+  sessionBestScore = Number(progress.levels[report.lessonId]?.bestScore) || 0;
+  if (newlyEarned.length) queueAchievementToasts(newlyEarned);
+
+  // Next level button: real unlock state only.
+  const next = nextLevel(report.lessonId);
+  els.btnNextLevel.hidden = !(next && isLevelUnlocked(progress, next.id));
 
   const percent = (value) => (value === null ? '—' : `${Math.round(value * 100)}%`);
   const rows = [
@@ -806,14 +1064,13 @@ function showResults(report) {
 
   els.rsReview.textContent = '';
   const heading = document.createElement('h3');
+  heading.textContent = 'Mistake review';
+  els.rsReview.append(heading);
   if (report.mistakes.length === 0) {
-    heading.textContent = 'Mistake review';
     const p = document.createElement('p');
     p.textContent = report.completed ? 'No mistakes — great run!' : 'No mistakes recorded.';
-    els.rsReview.append(heading, p);
+    els.rsReview.append(p);
   } else {
-    heading.textContent = 'Mistake review';
-    els.rsReview.append(heading);
     for (const mistake of report.mistakes) {
       const item = document.createElement('div');
       item.className = 'review-item';
@@ -981,14 +1238,31 @@ function cleanupGameDom() {
   clearGesture();
 }
 
-function startGame(lesson) {
+function beginLevel(level) {
+  if (!progress.tutorialDone) {
+    openTutorial(level); // first ever play: interactive walkthrough first
+    return;
+  }
+  startGame(level);
+}
+
+function startGame(level) {
+  const lesson = lessonFor(level);
+  if (!lesson) {
+    showToast('Level data is missing — reloading.');
+    loadLevelPack();
+    return;
+  }
   cleanupGameDom();
   setScreen('game'); // the playfield must be visible to be measurable
-  sessionBestScore = Number(readProgress().lessons[lesson.id]?.bestScore) || 0;
-  els.hudLessonSub.textContent = `${lesson.title} · ${lesson.proposedCefrLevel || ''}`.replace(/ · $/, '');
+  currentLevel = level;
+  sessionBestScore = Number(progress.levels[level.id]?.bestScore) || 0;
+  const stage = stageById(level.stageId);
+  els.hudLessonSub.textContent = `Level ${level.order} · ${level.title} · ${stage ? `${stage.name} (${stage.cefr})` : ''}`;
   engine = new WordSliceEngine({
     seed: ((Math.random() * 0xffffffff) >>> 0) || 1,
     maxActiveFruits: computeMaxActiveFruits(),
+    tuning: tuningOverridesFor(level.id),
   });
   lastLayout = { w: 0, h: 0 };
   applyLayout();
@@ -998,12 +1272,37 @@ function startGame(lesson) {
   startLoop();
 }
 
-function quitToMenu() {
+function quitToLevels() {
   if (engine) engine.abandonToMenu();
   engine = null;
+  currentLevel = null;
   stopLoop();
   cleanupGameDom();
-  renderMenu();
+  openLevelsScreen();
+}
+
+/* ------------------------------------------------------------------ */
+/* Achievements list (settings)                                        */
+/* ------------------------------------------------------------------ */
+
+function renderAchievements() {
+  els.achievementsList.replaceChildren();
+  for (const def of ACHIEVEMENTS) {
+    const li = document.createElement('li');
+    const earned = Boolean(progress.achievements[def.id]);
+    if (earned) li.className = 'is-earned';
+    const icon = document.createElement('span');
+    icon.className = 'ach-icon';
+    icon.textContent = '🏆';
+    const name = document.createElement('span');
+    name.className = 'ach-name';
+    name.textContent = def.name;
+    const desc = document.createElement('span');
+    desc.className = 'ach-desc';
+    desc.textContent = earned ? def.description : `? — ${def.description}`;
+    li.append(icon, name, desc);
+    els.achievementsList.append(li);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1011,10 +1310,67 @@ function quitToMenu() {
 /* ------------------------------------------------------------------ */
 
 function init() {
+  progress = readProgress(window.localStorage);
   preloadAppearanceImages(); // fire-and-forget; menu previews warm the cache
 
-  els.btnRetry.addEventListener('click', () => loadBank());
-  els.btnPlay.addEventListener('click', () => currentLesson && startGame(currentLesson));
+  els.btnRetry.addEventListener('click', () => loadLevelPack());
+
+  // Menu + levels navigation. Every visible button works.
+  const goMenu = () => renderMenu();
+  const goLevels = () => openLevelsScreen();
+  els.btnMenuHome.addEventListener('click', goMenu);
+  els.btnLevelsHome.addEventListener('click', goMenu);
+  els.btnMenuLevels.addEventListener('click', goLevels);
+  els.btnLevelsLevels.addEventListener('click', goLevels);
+  els.btnHeroLevels.addEventListener('click', goLevels);
+  els.btnPlay.addEventListener('click', () => beginLevel(continueTarget(progress)));
+
+  const openHow = () => openAppOverlay(els.menuHowOverlay);
+  els.btnMenuHow.addEventListener('click', openHow);
+  els.btnLevelsHow.addEventListener('click', openHow);
+  els.btnHeroHow.addEventListener('click', openHow);
+  els.pwHelp.addEventListener('click', openHow);
+  els.btnMenuHowClose.addEventListener('click', () => closeAppOverlay(els.menuHowOverlay));
+
+  const openSettings = () => {
+    renderAchievements();
+    openAppOverlay(els.settingsOverlay);
+  };
+  els.btnMenuSettings.addEventListener('click', openSettings);
+  els.btnLevelsSettings.addEventListener('click', openSettings);
+  els.pwSettings.addEventListener('click', openSettings);
+  els.btnSettingsClose.addEventListener('click', () => closeAppOverlay(els.settingsOverlay));
+  els.btnSettingsHow.addEventListener('click', () => {
+    els.settingsOverlay.hidden = true; // how-to stacks on top of settings
+    openAppOverlay(els.menuHowOverlay);
+  });
+  els.btnResetBest.addEventListener('click', () => {
+    if (!currentLevel) return;
+    const next = {
+      ...progress,
+      levels: { ...progress.levels, [currentLevel.id]: { bestStars: 0, bestScore: 0, plays: 0, passed: false, last: null } },
+    };
+    progress = next;
+    writeProgress(window.localStorage, progress);
+    sessionBestScore = 0;
+    closeAppOverlay(els.settingsOverlay);
+    showToast('Best score for this level reset.');
+  });
+
+  // Tutorial flow.
+  els.btnTutorialNext.addEventListener('click', () => {
+    const step = TUTORIAL_STEPS[tutorialIndex];
+    if (step && step.practice && !tutorialPracticeDone) return; // practice first (Skip stays available)
+    if (tutorialIndex < TUTORIAL_STEPS.length - 1) {
+      tutorialIndex++;
+      renderTutorialStep();
+    } else {
+      finishTutorial();
+    }
+  });
+  els.btnTutorialSkip.addEventListener('click', finishTutorial);
+
+  // In-game controls.
   els.btnLaunch.addEventListener('click', () => {
     if (engine && engine.state === ENGINE_STATES.ROUND_READY) {
       els.resizeNotice.hidden = true;
@@ -1037,8 +1393,8 @@ function init() {
       processEngineEvents();
     }
   });
-  els.btnRestart.addEventListener('click', () => currentLesson && startGame(currentLesson));
-  els.btnQuit.addEventListener('click', quitToMenu);
+  els.btnRestart.addEventListener('click', () => currentLevel && startGame(currentLevel));
+  els.btnQuit.addEventListener('click', quitToLevels);
   els.btnContinue.addEventListener('click', () => {
     if (engine && engine.state === ENGINE_STATES.ROUND_FEEDBACK) {
       engine.continueToNextRound(); // may finalize → sessionEnded event → results
@@ -1050,41 +1406,15 @@ function init() {
       }
     }
   });
-  els.btnAgain.addEventListener('click', () => currentLesson && startGame(currentLesson));
-  els.btnMenu.addEventListener('click', quitToMenu);
 
-  // Menu nav + hero: How to Play opens the app-level instructions.
-  const btnMenuHome = $('btn-menu-home');
-  if (btnMenuHome) btnMenuHome.addEventListener('click', () => screens.menu.scrollTo({ top: 0, behavior: 'smooth' }));
-  els.btnMenuHow.addEventListener('click', () => openAppOverlay(els.menuHowOverlay));
-  els.btnHeroHow.addEventListener('click', () => openAppOverlay(els.menuHowOverlay));
-  els.btnMenuHowClose.addEventListener('click', () => closeAppOverlay(els.menuHowOverlay));
-
-  // Settings: real actions only (reset best score, rules). Sound is a
-  // disabled "coming soon" control in the markup — nothing fakes audio.
-  els.btnMenuSettings.addEventListener('click', () => openAppOverlay(els.settingsOverlay));
-  els.pwSettings.addEventListener('click', () => openAppOverlay(els.settingsOverlay));
-  els.btnSettingsClose.addEventListener('click', () => closeAppOverlay(els.settingsOverlay));
-  els.btnSettingsHow.addEventListener('click', () => {
-    els.settingsOverlay.hidden = true; // how-to stacks on top of settings
-    openAppOverlay(els.menuHowOverlay);
+  // Results actions.
+  els.btnAgain.addEventListener('click', () => currentLevel && startGame(currentLevel));
+  els.btnNextLevel.addEventListener('click', () => {
+    const next = currentLevel && nextLevel(currentLevel.id);
+    if (next) beginLevel(next);
+    else openLevelsScreen();
   });
-  els.btnResetBest.addEventListener('click', () => {
-    if (!currentLesson) return;
-    const progress = readProgress();
-    delete progress.lessons[currentLesson.id];
-    writeProgress(progress);
-    sessionBestScore = 0;
-    renderMenu();
-    closeAppOverlay(els.settingsOverlay);
-    showToast('Best score reset.');
-  });
-
-  // Locked power-ups honestly announce themselves; no fake activation.
-  for (const btn of [els.pwSlow, els.pwAuto, els.pwShield]) {
-    if (!btn) continue;
-    btn.addEventListener('click', () => showToast(`${btn.dataset.power} — coming soon!`));
-  }
+  els.btnMenu.addEventListener('click', quitToLevels);
 
   els.playfield.addEventListener('pointerdown', onPointerDown);
   els.playfield.addEventListener('pointermove', onPointerMove);
@@ -1114,7 +1444,7 @@ function init() {
   }
   document.addEventListener('visibilitychange', onVisibilityChange);
 
-  loadBank();
+  loadLevelPack();
 }
 
 init();

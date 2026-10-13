@@ -1,0 +1,875 @@
+{
+  "schemaVersion": 2,
+  "stages": [
+    {
+      "stageId": "stage-1",
+      "levels": [
+        {
+          "id": "level-01",
+          "title": "Animals & Everyday Objects",
+          "questions": [
+            {
+              "id": "l01-q01",
+              "type": "category",
+              "prompt": "Slice the animals.",
+              "options": [
+                { "id": "cat", "text": "cat" },
+                { "id": "dog", "text": "dog" },
+                { "id": "horse", "text": "horse" },
+                { "id": "table", "text": "table" },
+                { "id": "chair", "text": "chair" }
+              ],
+              "correctOptionIds": ["cat", "dog", "horse"],
+              "explanation": "Cat, dog and horse are animals. Table and chair are furniture."
+            },
+            {
+              "id": "l01-q02",
+              "type": "category",
+              "prompt": "Slice the animals.",
+              "options": [
+                { "id": "bird", "text": "bird" },
+                { "id": "fish", "text": "fish" },
+                { "id": "rabbit", "text": "rabbit" },
+                { "id": "spoon", "text": "spoon" },
+                { "id": "window", "text": "window" }
+              ],
+              "correctOptionIds": ["bird", "fish", "rabbit"],
+              "explanation": "Bird, fish and rabbit are animals. Spoon and window are objects."
+            },
+            {
+              "id": "l01-q03",
+              "type": "category",
+              "prompt": "Slice the animals.",
+              "options": [
+                { "id": "lion", "text": "lion" },
+                { "id": "tiger", "text": "tiger" },
+                { "id": "monkey", "text": "monkey" },
+                { "id": "phone", "text": "phone" },
+                { "id": "shirt", "text": "shirt" }
+              ],
+              "correctOptionIds": ["lion", "tiger", "monkey"],
+              "explanation": "Lion, tiger and monkey are animals. Phone is a device and shirt is clothing."
+            },
+            {
+              "id": "l01-q04",
+              "type": "category",
+              "prompt": "Slice the farm animals.",
+              "options": [
+                { "id": "cow", "text": "cow" },
+                { "id": "sheep", "text": "sheep" },
+                { "id": "goat", "text": "goat" },
+                { "id": "plate", "text": "plate" },
+                { "id": "carpet", "text": "carpet" }
+              ],
+              "correctOptionIds": ["cow", "sheep", "goat"],
+              "explanation": "Cow, sheep and goat are farm animals. Plate and carpet are house objects."
+            },
+            {
+              "id": "l01-q05",
+              "type": "category",
+              "prompt": "Slice the animals.",
+              "options": [
+                { "id": "mouse", "text": "mouse" },
+                { "id": "snake", "text": "snake" },
+                { "id": "duck", "text": "duck" },
+                { "id": "key", "text": "key" },
+                { "id": "lamp", "text": "lamp" }
+              ],
+              "correctOptionIds": ["mouse", "snake", "duck"],
+              "explanation": "Mouse, snake and duck are animals. Key and lamp are everyday objects."
+            },
+            {
+              "id": "l01-q06",
+              "type": "category",
+              "prompt": "Slice the furniture.",
+              "options": [
+                { "id": "table", "text": "table" },
+                { "id": "chair", "text": "chair" },
+                { "id": "bed", "text": "bed" },
+                { "id": "apple", "text": "apple" },
+                { "id": "cat", "text": "cat" }
+              ],
+              "correctOptionIds": ["table", "chair", "bed"],
+              "explanation": "Table, chair and bed are furniture. Apple is a fruit and cat is an animal."
+            },
+            {
+              "id": "l01-q07",
+              "type": "category",
+              "prompt": "Slice the furniture.",
+              "options": [
+                { "id": "sofa", "text": "sofa" },
+                { "id": "shelf", "text": "shelf" },
+                { "id": "bed", "text": "bed" },
+                { "id": "dog", "text": "dog" },
+                { "id": "bread", "text": "bread" }
+              ],
+              "correctOptionIds": ["sofa", "shelf", "bed"],
+              "explanation": "Sofa, shelf and bed are pieces of furniture. Dog is an animal and bread is food."
+            },
+            {
+              "id": "l01-q08",
+              "type": "category",
+              "prompt": "Slice the things you use every day.",
+              "options": [
+                { "id": "phone", "text": "phone" },
+                { "id": "keys", "text": "keys" },
+                { "id": "watch", "text": "watch" },
+                { "id": "lion", "text": "lion" },
+                { "id": "horse", "text": "horse" }
+              ],
+              "correctOptionIds": ["phone", "keys", "watch"],
+              "explanation": "Phone, keys and watch are things people use daily. Lion and horse are animals."
+            },
+            {
+              "id": "l01-q09",
+              "type": "category",
+              "prompt": "Slice the things you find outside.",
+              "options": [
+                { "id": "tree", "text": "tree" },
+                { "id": "flower", "text": "flower" },
+                { "id": "bridge", "text": "bridge" },
+                { "id": "spoon", "text": "spoon" },
+                { "id": "bed", "text": "bed" }
+              ],
+              "correctOptionIds": ["tree", "flower", "bridge"],
+              "explanation": "Tree, flower and bridge are found outside. Spoon and bed belong inside a home."
+            },
+            {
+              "id": "l01-q10",
+              "type": "category",
+              "prompt": "Slice the animals.",
+              "options": [
+                { "id": "hen", "text": "hen" },
+                { "id": "fox", "text": "fox" },
+                { "id": "deer", "text": "deer" },
+                { "id": "clock", "text": "clock" },
+                { "id": "towel", "text": "towel" }
+              ],
+              "correctOptionIds": ["hen", "fox", "deer"],
+              "explanation": "Hen, fox and deer are animals. Clock and towel are household objects."
+            },
+            {
+              "id": "l01-q11",
+              "type": "category",
+              "prompt": "Slice the small everyday objects.",
+              "options": [
+                { "id": "coin", "text": "coin" },
+                { "id": "pen", "text": "pen" },
+                { "id": "ring", "text": "ring" },
+                { "id": "elephant", "text": "elephant" },
+                { "id": "wardrobe", "text": "wardrobe" }
+              ],
+              "correctOptionIds": ["coin", "pen", "ring"],
+              "explanation": "Coin, pen and ring are small objects. Elephant is a big animal and wardrobe is large furniture."
+            },
+            {
+              "id": "l01-q12",
+              "type": "category",
+              "prompt": "Slice the animals that can fly.",
+              "options": [
+                { "id": "bird", "text": "bird" },
+                { "id": "bee", "text": "bee" },
+                { "id": "fly2", "text": "butterfly" },
+                { "id": "whale", "text": "whale" },
+                { "id": "fish", "text": "fish" }
+              ],
+              "correctOptionIds": ["bird", "bee", "fly2"],
+              "explanation": "Bird, bee and butterfly can fly. Whale and fish live in water."
+            },
+            {
+              "id": "l01-q13",
+              "type": "category",
+              "prompt": "Slice the pets.",
+              "options": [
+                { "id": "cat", "text": "cat" },
+                { "id": "dog", "text": "dog" },
+                { "id": "fish", "text": "fish" },
+                { "id": "tiger", "text": "tiger" },
+                { "id": "wolf", "text": "wolf" }
+              ],
+              "correctOptionIds": ["cat", "dog", "fish"],
+              "explanation": "Cat, dog and fish are common pets. Tiger and wolf are wild animals."
+            },
+            {
+              "id": "l01-q14",
+              "type": "category",
+              "prompt": "Slice the wild animals.",
+              "options": [
+                { "id": "bear", "text": "bear" },
+                { "id": "giraffe", "text": "giraffe" },
+                { "id": "zebra", "text": "zebra" },
+                { "id": "sofa", "text": "sofa" },
+                { "id": "lamp", "text": "lamp" }
+              ],
+              "correctOptionIds": ["bear", "giraffe", "zebra"],
+              "explanation": "Bear, giraffe and zebra are wild animals. Sofa and lamp are furniture."
+            },
+            {
+              "id": "l01-q15",
+              "type": "category",
+              "prompt": "Slice the electronic things.",
+              "options": [
+                { "id": "phone", "text": "phone" },
+                { "id": "radio", "text": "radio" },
+                { "id": "laptop", "text": "laptop" },
+                { "id": "horse", "text": "horse" },
+                { "id": "tree", "text": "tree" }
+              ],
+              "correctOptionIds": ["phone", "radio", "laptop"],
+              "explanation": "Phone, radio and laptop are electronic devices. Horse is an animal and tree is a plant."
+            }
+          ]
+        },
+        {
+          "id": "level-02",
+          "title": "Food & Drinks",
+          "questions": [
+            {
+              "id": "l02-q01",
+              "type": "category",
+              "prompt": "Slice the foods.",
+              "options": [
+                { "id": "bread", "text": "bread" },
+                { "id": "rice", "text": "rice" },
+                { "id": "apple", "text": "apple" },
+                { "id": "desk", "text": "desk" },
+                { "id": "shirt", "text": "shirt" }
+              ],
+              "correctOptionIds": ["bread", "rice", "apple"],
+              "explanation": "Bread, rice and apple are foods. Desk is furniture and shirt is clothing."
+            },
+            {
+              "id": "l02-q02",
+              "type": "category",
+              "prompt": "Slice the fruits.",
+              "options": [
+                { "id": "banana", "text": "banana" },
+                { "id": "grape", "text": "grape" },
+                { "id": "pear", "text": "pear" },
+                { "id": "carrot", "text": "carrot" },
+                { "id": "potato", "text": "potato" }
+              ],
+              "correctOptionIds": ["banana", "grape", "pear"],
+              "explanation": "Banana, grape and pear are fruits. Carrot and potato are vegetables."
+            },
+            {
+              "id": "l02-q03",
+              "type": "category",
+              "prompt": "Slice the vegetables.",
+              "options": [
+                { "id": "carrot", "text": "carrot" },
+                { "id": "pea", "text": "pea" },
+                { "id": "corn", "text": "corn" },
+                { "id": "candy", "text": "candy" },
+                { "id": "juice", "text": "juice" }
+              ],
+              "correctOptionIds": ["carrot", "pea", "corn"],
+              "explanation": "Carrot, pea and corn are vegetables. Candy is a sweet and juice is a drink."
+            },
+            {
+              "id": "l02-q04",
+              "type": "category",
+              "prompt": "Slice the drinks.",
+              "options": [
+                { "id": "water", "text": "water" },
+                { "id": "milk", "text": "milk" },
+                { "id": "tea", "text": "tea" },
+                { "id": "bread", "text": "bread" },
+                { "id": "cake", "text": "cake" }
+              ],
+              "correctOptionIds": ["water", "milk", "tea"],
+              "explanation": "Water, milk and tea are drinks. Bread and cake are foods."
+            },
+            {
+              "id": "l02-q05",
+              "type": "category",
+              "prompt": "Slice the fruits.",
+              "options": [
+                { "id": "orange", "text": "orange" },
+                { "id": "melon", "text": "melon" },
+                { "id": "cherry", "text": "cherry" },
+                { "id": "cheese", "text": "cheese" },
+                { "id": "eggs", "text": "eggs" }
+              ],
+              "correctOptionIds": ["orange", "melon", "cherry"],
+              "explanation": "Orange, melon and cherry are fruits. Cheese and eggs are other foods."
+            },
+            {
+              "id": "l02-q06",
+              "type": "category",
+              "prompt": "Slice the foods.",
+              "options": [
+                { "id": "egg", "text": "egg" },
+                { "id": "cheese", "text": "cheese" },
+                { "id": "pasta", "text": "pasta" },
+                { "id": "river", "text": "river" },
+                { "id": "shirt", "text": "shirt" }
+              ],
+              "correctOptionIds": ["egg", "cheese", "pasta"],
+              "explanation": "Egg, cheese and pasta are foods. River is a place and shirt is clothing."
+            },
+            {
+              "id": "l02-q07",
+              "type": "category",
+              "prompt": "Slice the sweet foods.",
+              "options": [
+                { "id": "cake", "text": "cake" },
+                { "id": "honey", "text": "honey" },
+                { "id": "candy", "text": "candy" },
+                { "id": "lemon", "text": "lemon" },
+                { "id": "salt", "text": "salt" }
+              ],
+              "correctOptionIds": ["cake", "honey", "candy"],
+              "explanation": "Cake, honey and candy taste sweet. Lemon is sour and salt is salty."
+            },
+            {
+              "id": "l02-q08",
+              "type": "category",
+              "prompt": "Slice the vegetables.",
+              "options": [
+                { "id": "onion", "text": "onion" },
+                { "id": "tomato", "text": "tomato" },
+                { "id": "bean", "text": "bean" },
+                { "id": "apple", "text": "apple" },
+                { "id": "juice", "text": "juice" }
+              ],
+              "correctOptionIds": ["onion", "tomato", "bean"],
+              "explanation": "Onion, tomato and bean are vegetables. Apple is a fruit and juice is a drink."
+            },
+            {
+              "id": "l02-q09",
+              "type": "category",
+              "prompt": "Slice the breakfast foods.",
+              "options": [
+                { "id": "toast", "text": "toast" },
+                { "id": "cereal", "text": "cereal" },
+                { "id": "egg", "text": "egg" },
+                { "id": "pizza", "text": "pizza" },
+                { "id": "steak", "text": "steak" }
+              ],
+              "correctOptionIds": ["toast", "cereal", "egg"],
+              "explanation": "Toast, cereal and eggs are typical breakfast foods. Pizza and steak are not breakfast foods."
+            },
+            {
+              "id": "l02-q10",
+              "type": "category",
+              "prompt": "Slice the drinks.",
+              "options": [
+                { "id": "coffee", "text": "coffee" },
+                { "id": "juice", "text": "juice" },
+                { "id": "soda", "text": "soda" },
+                { "id": "apple", "text": "apple" },
+                { "id": "rice", "text": "rice" }
+              ],
+              "correctOptionIds": ["coffee", "juice", "soda"],
+              "explanation": "Coffee, juice and soda are drinks. Apple is a fruit and rice is food."
+            },
+            {
+              "id": "l02-q11",
+              "type": "category",
+              "prompt": "Slice the fruits.",
+              "options": [
+                { "id": "mango", "text": "mango" },
+                { "id": "peach", "text": "peach" },
+                { "id": "kiwi", "text": "kiwi" },
+                { "id": "fish", "text": "fish" },
+                { "id": "meat", "text": "meat" }
+              ],
+              "correctOptionIds": ["mango", "peach", "kiwi"],
+              "explanation": "Mango, peach and kiwi are fruits. Fish and meat are other foods."
+            },
+            {
+              "id": "l02-q12",
+              "type": "category",
+              "prompt": "Slice the dairy foods.",
+              "options": [
+                { "id": "milk", "text": "milk" },
+                { "id": "cheese", "text": "cheese" },
+                { "id": "yogurt", "text": "yogurt" },
+                { "id": "bread", "text": "bread" },
+                { "id": "chicken", "text": "chicken" }
+              ],
+              "correctOptionIds": ["milk", "cheese", "yogurt"],
+              "explanation": "Milk, cheese and yogurt are made from milk (dairy). Bread is baked and chicken is meat."
+            },
+            {
+              "id": "l02-q13",
+              "type": "category",
+              "prompt": "Slice the foods made from flour.",
+              "options": [
+                { "id": "bread", "text": "bread" },
+                { "id": "pasta", "text": "pasta" },
+                { "id": "noodle", "text": "noodles" },
+                { "id": "milk", "text": "milk" },
+                { "id": "grape", "text": "grape" }
+              ],
+              "correctOptionIds": ["bread", "pasta", "noodle"],
+              "explanation": "Bread, pasta and noodles are made from flour. Milk is a drink and grape is a fruit."
+            },
+            {
+              "id": "l02-q14",
+              "type": "category",
+              "prompt": "Slice the healthy snacks.",
+              "options": [
+                { "id": "apple", "text": "apple" },
+                { "id": "carrot", "text": "carrot" },
+                { "id": "nuts", "text": "nuts" },
+                { "id": "candy", "text": "candy" },
+                { "id": "chips", "text": "chips" }
+              ],
+              "correctOptionIds": ["apple", "carrot", "nuts"],
+              "explanation": "Apple, carrot and nuts are healthy snacks. Candy and chips are less healthy."
+            },
+            {
+              "id": "l02-q15",
+              "type": "category",
+              "prompt": "Slice the meats.",
+              "options": [
+                { "id": "chicken", "text": "chicken" },
+                { "id": "beef", "text": "beef" },
+                { "id": "fish", "text": "fish" },
+                { "id": "apple", "text": "apple" },
+                { "id": "tea", "text": "tea" }
+              ],
+              "correctOptionIds": ["chicken", "beef", "fish"],
+              "explanation": "Chicken, beef and fish are meats. Apple is a fruit and tea is a drink."
+            }
+          ]
+        },
+        {
+          "id": "level-03",
+          "title": "School Vocabulary",
+          "questions": [
+            {
+              "id": "l03-q01",
+              "type": "category",
+              "prompt": "Slice the words related to school.",
+              "options": [
+                { "id": "teacher", "text": "teacher" },
+                { "id": "classroom", "text": "classroom" },
+                { "id": "homework", "text": "homework" },
+                { "id": "textbook", "text": "textbook" },
+                { "id": "kitchen", "text": "kitchen" },
+                { "id": "bicycle", "text": "bicycle" }
+              ],
+              "correctOptionIds": ["teacher", "classroom", "homework", "textbook"],
+              "explanation": "Teacher, classroom, homework and textbook are school words. Kitchen is a room at home and bicycle is transport."
+            },
+            {
+              "id": "l03-q02",
+              "type": "category",
+              "prompt": "Slice the school objects.",
+              "options": [
+                { "id": "pencil", "text": "pencil" },
+                { "id": "notebook", "text": "notebook" },
+                { "id": "ruler", "text": "ruler" },
+                { "id": "banana", "text": "banana" },
+                { "id": "car", "text": "car" }
+              ],
+              "correctOptionIds": ["pencil", "notebook", "ruler"],
+              "explanation": "Pencil, notebook and ruler are school objects. Banana is food and car is transport."
+            },
+            {
+              "id": "l03-q03",
+              "type": "category",
+              "prompt": "Slice the school subjects.",
+              "options": [
+                { "id": "maths", "text": "maths" },
+                { "id": "history", "text": "history" },
+                { "id": "art", "text": "art" },
+                { "id": "lunch", "text": "lunch" },
+                { "id": "chair", "text": "chair" }
+              ],
+              "correctOptionIds": ["maths", "history", "art"],
+              "explanation": "Maths, history and art are school subjects. Lunch is a meal and chair is furniture."
+            },
+            {
+              "id": "l03-q04",
+              "type": "category",
+              "prompt": "Slice the school subjects.",
+              "options": [
+                { "id": "science", "text": "science" },
+                { "id": "music", "text": "music" },
+                { "id": "geography", "text": "geography" },
+                { "id": "football", "text": "football" },
+                { "id": "door", "text": "door" }
+              ],
+              "correctOptionIds": ["science", "music", "geography"],
+              "explanation": "Science, music and geography are school subjects. Football is a game and door is an object."
+            },
+            {
+              "id": "l03-q05",
+              "type": "category",
+              "prompt": "Slice the people at school.",
+              "options": [
+                { "id": "teacher", "text": "teacher" },
+                { "id": "student", "text": "student" },
+                { "id": "principal", "text": "principal" },
+                { "id": "doctor", "text": "doctor" },
+                { "id": "chef", "text": "chef" }
+              ],
+              "correctOptionIds": ["teacher", "student", "principal"],
+              "explanation": "Teacher, student and principal are people at school. Doctor works at a hospital and chef works in a restaurant."
+            },
+            {
+              "id": "l03-q06",
+              "type": "category",
+              "prompt": "Slice the things you write with.",
+              "options": [
+                { "id": "pencil", "text": "pencil" },
+                { "id": "pen", "text": "pen" },
+                { "id": "crayon", "text": "crayon" },
+                { "id": "paper", "text": "paper" },
+                { "id": "ruler", "text": "ruler" }
+              ],
+              "correctOptionIds": ["pencil", "pen", "crayon"],
+              "explanation": "You write WITH a pencil, pen or crayon. Paper is what you write ON, and a ruler measures."
+            },
+            {
+              "id": "l03-q07",
+              "type": "category",
+              "prompt": "Slice the places at school.",
+              "options": [
+                { "id": "library", "text": "library" },
+                { "id": "playground", "text": "playground" },
+                { "id": "classroom", "text": "classroom" },
+                { "id": "kitchen", "text": "kitchen" },
+                { "id": "market", "text": "market" }
+              ],
+              "correctOptionIds": ["library", "playground", "classroom"],
+              "explanation": "Library, playground and classroom are places at school. Kitchen is at home and market is for shopping."
+            },
+            {
+              "id": "l03-q08",
+              "type": "category",
+              "prompt": "Slice the school actions.",
+              "options": [
+                { "id": "read", "text": "read" },
+                { "id": "write", "text": "write" },
+                { "id": "study", "text": "study" },
+                { "id": "sleep", "text": "sleep" },
+                { "id": "cook", "text": "cook" }
+              ],
+              "correctOptionIds": ["read", "write", "study"],
+              "explanation": "Read, write and study are school actions. Sleep and cook are not school activities."
+            },
+            {
+              "id": "l03-q09",
+              "type": "category",
+              "prompt": "Slice the things in a pencil case.",
+              "options": [
+                { "id": "eraser", "text": "eraser" },
+                { "id": "sharpener", "text": "sharpener" },
+                { "id": "pen", "text": "pen" },
+                { "id": "shirt", "text": "shirt" },
+                { "id": "shoes", "text": "shoes" }
+              ],
+              "correctOptionIds": ["eraser", "sharpener", "pen"],
+              "explanation": "Eraser, sharpener and pen live in a pencil case. Shirt and shoes are clothing."
+            },
+            {
+              "id": "l03-q10",
+              "type": "category",
+              "prompt": "Slice the school subjects.",
+              "options": [
+                { "id": "english", "text": "english" },
+                { "id": "physics", "text": "physics" },
+                { "id": "drama", "text": "drama" },
+                { "id": "dinner", "text": "dinner" },
+                { "id": "sofa", "text": "sofa" }
+              ],
+              "correctOptionIds": ["english", "physics", "drama"],
+              "explanation": "English, physics and drama are school subjects. Dinner is a meal and sofa is furniture."
+            },
+            {
+              "id": "l03-q11",
+              "type": "category",
+              "prompt": "Slice the objects on a desk.",
+              "options": [
+                { "id": "lamp", "text": "lamp" },
+                { "id": "computer", "text": "computer" },
+                { "id": "papers", "text": "papers" },
+                { "id": "pillow", "text": "pillow" },
+                { "id": "oven", "text": "oven" }
+              ],
+              "correctOptionIds": ["lamp", "computer", "papers"],
+              "explanation": "Lamp, computer and papers belong on a desk. Pillow is for a bed and oven is for a kitchen."
+            },
+            {
+              "id": "l03-q12",
+              "type": "category",
+              "prompt": "Slice the words about learning.",
+              "options": [
+                { "id": "practice", "text": "practice" },
+                { "id": "lesson", "text": "lesson" },
+                { "id": "skill", "text": "skill" },
+                { "id": "holiday", "text": "holiday" },
+                { "id": "cake", "text": "cake" }
+              ],
+              "correctOptionIds": ["practice", "lesson", "skill"],
+              "explanation": "Practice, lesson and skill are about learning. Holiday is a break and cake is food."
+            },
+            {
+              "id": "l03-q13",
+              "type": "category",
+              "prompt": "Slice the things students carry.",
+              "options": [
+                { "id": "backpack", "text": "backpack" },
+                { "id": "book", "text": "book" },
+                { "id": "lunchbox", "text": "lunchbox" },
+                { "id": "fridge", "text": "fridge" },
+                { "id": "sofa", "text": "sofa" }
+              ],
+              "correctOptionIds": ["backpack", "book", "lunchbox"],
+              "explanation": "Students carry a backpack, books and a lunchbox. Fridge and sofa are too big to carry."
+            },
+            {
+              "id": "l03-q14",
+              "type": "category",
+              "prompt": "Slice the ways to learn.",
+              "options": [
+                { "id": "reading", "text": "reading" },
+                { "id": "writing", "text": "writing" },
+                { "id": "asking", "text": "asking" },
+                { "id": "sleeping", "text": "sleeping" },
+                { "id": "eating", "text": "eating" }
+              ],
+              "correctOptionIds": ["reading", "writing", "asking"],
+              "explanation": "Reading, writing and asking questions help you learn. Sleeping and eating are daily needs."
+            },
+            {
+              "id": "l03-q15",
+              "type": "category",
+              "prompt": "Slice the words about tests.",
+              "options": [
+                { "id": "test", "text": "test" },
+                { "id": "exam", "text": "exam" },
+                { "id": "grade", "text": "grade" },
+                { "id": "party", "text": "party" },
+                { "id": "beach", "text": "beach" }
+              ],
+              "correctOptionIds": ["test", "exam", "grade"],
+              "explanation": "Test, exam and grade are about school assessment. Party and beach are fun places."
+            }
+          ]
+        },
+        {
+          "id": "level-04",
+          "title": "House & Family",
+          "questions": [
+            {
+              "id": "l04-q01",
+              "type": "category",
+              "prompt": "Slice the parts of a house.",
+              "options": [
+                { "id": "roof", "text": "roof" },
+                { "id": "door", "text": "door" },
+                { "id": "window", "text": "window" },
+                { "id": "apple", "text": "apple" },
+                { "id": "dog", "text": "dog" }
+              ],
+              "correctOptionIds": ["roof", "door", "window"],
+              "explanation": "Roof, door and window are parts of a house. Apple is a fruit and dog is an animal."
+            },
+            {
+              "id": "l04-q02",
+              "type": "category",
+              "prompt": "Slice the rooms in a house.",
+              "options": [
+                { "id": "kitchen", "text": "kitchen" },
+                { "id": "bathroom", "text": "bathroom" },
+                { "id": "bedroom", "text": "bedroom" },
+                { "id": "market", "text": "market" },
+                { "id": "school", "text": "school" }
+              ],
+              "correctOptionIds": ["kitchen", "bathroom", "bedroom"],
+              "explanation": "Kitchen, bathroom and bedroom are rooms in a house. Market and school are other buildings."
+            },
+            {
+              "id": "l04-q03",
+              "type": "category",
+              "prompt": "Slice the family members.",
+              "options": [
+                { "id": "mother", "text": "mother" },
+                { "id": "father", "text": "father" },
+                { "id": "sister", "text": "sister" },
+                { "id": "teacher", "text": "teacher" },
+                { "id": "friend", "text": "friend" }
+              ],
+              "correctOptionIds": ["mother", "father", "sister"],
+              "explanation": "Mother, father and sister are family members. Teacher and friend are not family."
+            },
+            {
+              "id": "l04-q04",
+              "type": "category",
+              "prompt": "Slice the family members.",
+              "options": [
+                { "id": "grandma", "text": "grandma" },
+                { "id": "grandpa", "text": "grandpa" },
+                { "id": "uncle", "text": "uncle" },
+                { "id": "doctor", "text": "doctor" },
+                { "id": "neighbor", "text": "neighbor" }
+              ],
+              "correctOptionIds": ["grandma", "grandpa", "uncle"],
+              "explanation": "Grandma, grandpa and uncle are family members. Doctor and neighbor are not family."
+            },
+            {
+              "id": "l04-q05",
+              "type": "category",
+              "prompt": "Slice the parts of a house.",
+              "options": [
+                { "id": "wall", "text": "wall" },
+                { "id": "floor", "text": "floor" },
+                { "id": "ceiling", "text": "ceiling" },
+                { "id": "street", "text": "street" },
+                { "id": "field", "text": "field" }
+              ],
+              "correctOptionIds": ["wall", "floor", "ceiling"],
+              "explanation": "Wall, floor and ceiling are parts of a house. Street and field are outside places."
+            },
+            {
+              "id": "l04-q06",
+              "type": "category",
+              "prompt": "Slice the family members.",
+              "options": [
+                { "id": "brother", "text": "brother" },
+                { "id": "aunt", "text": "aunt" },
+                { "id": "cousin", "text": "cousin" },
+                { "id": "classmate", "text": "classmate" },
+                { "id": "nurse", "text": "nurse" }
+              ],
+              "correctOptionIds": ["brother", "aunt", "cousin"],
+              "explanation": "Brother, aunt and cousin are family members. Classmate and nurse are not family."
+            },
+            {
+              "id": "l04-q07",
+              "type": "category",
+              "prompt": "Slice the things in a living room.",
+              "options": [
+                { "id": "sofa", "text": "sofa" },
+                { "id": "carpet", "text": "carpet" },
+                { "id": "tv", "text": "tv" },
+                { "id": "oven", "text": "oven" },
+                { "id": "stove", "text": "stove" }
+              ],
+              "correctOptionIds": ["sofa", "carpet", "tv"],
+              "explanation": "Sofa, carpet and TV are in a living room. Oven and stove are in a kitchen."
+            },
+            {
+              "id": "l04-q08",
+              "type": "category",
+              "prompt": "Slice the things in a bedroom.",
+              "options": [
+                { "id": "bed", "text": "bed" },
+                { "id": "pillow", "text": "pillow" },
+                { "id": "wardrobe", "text": "wardrobe" },
+                { "id": "oven", "text": "oven" },
+                { "id": "kettle", "text": "kettle" }
+              ],
+              "correctOptionIds": ["bed", "pillow", "wardrobe"],
+              "explanation": "Bed, pillow and wardrobe are bedroom things. Oven and kettle are kitchen things."
+            },
+            {
+              "id": "l04-q09",
+              "type": "category",
+              "prompt": "Slice the things in a kitchen.",
+              "options": [
+                { "id": "oven", "text": "oven" },
+                { "id": "sink", "text": "sink" },
+                { "id": "kettle", "text": "kettle" },
+                { "id": "bed", "text": "bed" },
+                { "id": "sofa", "text": "sofa" }
+              ],
+              "correctOptionIds": ["oven", "sink", "kettle"],
+              "explanation": "Oven, sink and kettle are kitchen things. Bed is for a bedroom and sofa for a living room."
+            },
+            {
+              "id": "l04-q10",
+              "type": "category",
+              "prompt": "Slice the rooms or spaces of a home.",
+              "options": [
+                { "id": "garage", "text": "garage" },
+                { "id": "hall", "text": "hall" },
+                { "id": "attic", "text": "attic" },
+                { "id": "street", "text": "street" },
+                { "id": "shop", "text": "shop" }
+              ],
+              "correctOptionIds": ["garage", "hall", "attic"],
+              "explanation": "Garage, hall and attic are spaces of a home. Street and shop are outside."
+            },
+            {
+              "id": "l04-q11",
+              "type": "category",
+              "prompt": "Slice the family members.",
+              "options": [
+                { "id": "son", "text": "son" },
+                { "id": "daughter", "text": "daughter" },
+                { "id": "wife", "text": "wife" },
+                { "id": "boss", "text": "boss" },
+                { "id": "client", "text": "client" }
+              ],
+              "correctOptionIds": ["son", "daughter", "wife"],
+              "explanation": "Son, daughter and wife are family members. Boss and client are work contacts."
+            },
+            {
+              "id": "l04-q12",
+              "type": "category",
+              "prompt": "Slice the things in a bathroom.",
+              "options": [
+                { "id": "bathtub", "text": "bathtub" },
+                { "id": "towel", "text": "towel" },
+                { "id": "soap", "text": "soap" },
+                { "id": "oven", "text": "oven" },
+                { "id": "desk", "text": "desk" }
+              ],
+              "correctOptionIds": ["bathtub", "towel", "soap"],
+              "explanation": "Bathtub, towel and soap are bathroom things. Oven is a kitchen appliance and desk is for work."
+            },
+            {
+              "id": "l04-q13",
+              "type": "category",
+              "prompt": "Slice the furniture.",
+              "options": [
+                { "id": "table", "text": "table" },
+                { "id": "chair", "text": "chair" },
+                { "id": "shelf", "text": "shelf" },
+                { "id": "banana", "text": "banana" },
+                { "id": "cloud", "text": "cloud" }
+              ],
+              "correctOptionIds": ["table", "chair", "shelf"],
+              "explanation": "Table, chair and shelf are furniture. Banana is a fruit and cloud is in the sky."
+            },
+            {
+              "id": "l04-q14",
+              "type": "category",
+              "prompt": "Slice the parts around a house.",
+              "options": [
+                { "id": "garden", "text": "garden" },
+                { "id": "fence", "text": "fence" },
+                { "id": "gate", "text": "gate" },
+                { "id": "airport", "text": "airport" },
+                { "id": "station", "text": "station" }
+              ],
+              "correctOptionIds": ["garden", "fence", "gate"],
+              "explanation": "Garden, fence and gate are parts around a house. Airport and station are transport places."
+            },
+            {
+              "id": "l04-q15",
+              "type": "category",
+              "prompt": "Slice the family members.",
+              "options": [
+                { "id": "husband", "text": "husband" },
+                { "id": "nephew", "text": "nephew" },
+                { "id": "grandma", "text": "grandma" },
+                { "id": "patient", "text": "patient" },
+                { "id": "driver", "text": "driver" }
+              ],
+              "correctOptionIds": ["husband", "nephew", "grandma"],
+              "explanation": "Husband, nephew and grandma are family members. Patient and driver are not family."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

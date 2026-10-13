@@ -159,16 +159,16 @@ const els = {
 /* ------------------------------------------------------------------ */
 
 const FRUIT_APPEARANCES = {
-  watermelon: { whole: 'assets/fruits/sprites/uncuted/watermelon.png', cut: 'assets/fruits/sprites/cuted/watermelon.png', juice: '#e5484d', scale: 1.04 },
-  pineapple: { whole: 'assets/fruits/sprites/uncuted/pineapple.png', cut: 'assets/fruits/sprites/cuted/pineapple.png', juice: '#ffcf3d', scale: 1.08 },
-  apple: { whole: 'assets/fruits/sprites/uncuted/apple.png', cut: 'assets/fruits/sprites/cuted/apple.png', juice: '#f2e8c9', scale: 1.04 },
-  orange: { whole: 'assets/fruits/sprites/uncuted/orange.png', cut: 'assets/fruits/sprites/cuted/orange.png', juice: '#ffa53d', scale: 1.04 },
-  strawberry: { whole: 'assets/fruits/sprites/uncuted/strawberry.png', cut: 'assets/fruits/sprites/cuted/strawberry.png', juice: '#e63950', scale: 1.06 },
-  blueberry: { whole: 'assets/fruits/sprites/uncuted/blueberry.png', cut: 'assets/fruits/sprites/cuted/blueberry.png', juice: '#5a8dee', scale: 1.04 },
-  banana: { whole: 'assets/fruits/sprites/uncuted/banana.png', cut: 'assets/fruits/sprites/cuted/banana.png', juice: '#ffe97a', scale: 1.18 },
-  pear: { whole: 'assets/fruits/sprites/uncuted/pear.png', cut: 'assets/fruits/sprites/cuted/pear.png', juice: '#d9e8a6', scale: 1.06 },
-  lemon: { whole: 'assets/fruits/sprites/uncuted/lemon.png', cut: 'assets/fruits/sprites/cuted/lemon.png', juice: '#ffd94d', scale: 1.04 },
-  kiwi: { whole: 'assets/fruits/sprites/uncuted/kiwi.png', cut: 'assets/fruits/sprites/cuted/kiwi.png', juice: '#9bcf3f', scale: 1.04 },
+  watermelon: { whole: 'assets/fruits/sprites/uncuted/watermelon.webp', cut: 'assets/fruits/sprites/cuted/watermelon.webp', juice: '#e5484d', scale: 1.04 },
+  pineapple: { whole: 'assets/fruits/sprites/uncuted/pineapple.webp', cut: 'assets/fruits/sprites/cuted/pineapple.webp', juice: '#ffcf3d', scale: 1.08 },
+  apple: { whole: 'assets/fruits/sprites/uncuted/apple.webp', cut: 'assets/fruits/sprites/cuted/apple.webp', juice: '#f2e8c9', scale: 1.04 },
+  orange: { whole: 'assets/fruits/sprites/uncuted/orange.webp', cut: 'assets/fruits/sprites/cuted/orange.webp', juice: '#ffa53d', scale: 1.04 },
+  strawberry: { whole: 'assets/fruits/sprites/uncuted/strawberry.webp', cut: 'assets/fruits/sprites/cuted/strawberry.webp', juice: '#e63950', scale: 1.06 },
+  blueberry: { whole: 'assets/fruits/sprites/uncuted/blueberry.webp', cut: 'assets/fruits/sprites/cuted/blueberry.webp', juice: '#5a8dee', scale: 1.04 },
+  banana: { whole: 'assets/fruits/sprites/uncuted/banana.webp', cut: 'assets/fruits/sprites/cuted/banana.webp', juice: '#ffe97a', scale: 1.18 },
+  pear: { whole: 'assets/fruits/sprites/uncuted/pear.webp', cut: 'assets/fruits/sprites/cuted/pear.webp', juice: '#d9e8a6', scale: 1.06 },
+  lemon: { whole: 'assets/fruits/sprites/uncuted/lemon.webp', cut: 'assets/fruits/sprites/cuted/lemon.webp', juice: '#ffd94d', scale: 1.04 },
+  kiwi: { whole: 'assets/fruits/sprites/uncuted/kiwi.webp', cut: 'assets/fruits/sprites/cuted/kiwi.webp', juice: '#9bcf3f', scale: 1.04 },
 };
 
 /** appearanceId -> { whole: Image, cut: Image } (only successfully loaded). */
@@ -618,20 +618,20 @@ function openLevelsScreen() {
 const TUTORIAL_STEPS = [
   {
     title: '1 · Read the question',
-    img: 'assets/fruits/sprites/uncuted/watermelon.png',
+    img: 'assets/fruits/sprites/uncuted/watermelon.webp',
     text: 'Every round shows a challenge on the parchment banner, like "Slice the fruits.".',
   },
   {
     practice: true,
     title: '2 · Slice the matching fruit',
     fruit: 'apple',
-    fruitImg: 'assets/fruits/sprites/uncuted/apple.png',
-    cutImg: 'assets/fruits/sprites/cuted/apple.png',
+    fruitImg: 'assets/fruits/sprites/uncuted/apple.webp',
+    cutImg: 'assets/fruits/sprites/cuted/apple.webp',
     text: 'Drag across the fruit carrying a word that matches. Try it: swipe through this apple!',
   },
   {
     title: '3 · Leave other fruits alone',
-    img: 'assets/fruits/sprites/uncuted/strawberry.png',
+    img: 'assets/fruits/sprites/uncuted/strawberry.webp',
     label: 'table',
     text: 'This strawberry says "table" — not a fruit. Slicing wrong words costs a heart, so let it fly by.',
   },

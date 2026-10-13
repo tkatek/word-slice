@@ -537,12 +537,20 @@ export function createAudioManager(deps = {}) {
   /** Blocks the gameplay bus (pause). UI sounds remain allowed. */
   function setSuspended(flag) {
     suspended = Boolean(flag);
-    if (suspended) {
-      for (const id of sequenceTimers) {
-        clearTimer(id);
-      }
-      sequenceTimers.clear();
+    if (suspended) cancelSequences();
+  }
+
+  /**
+   * Cancels every pending playSequence item (level-end celebrations that
+   * would otherwise keep firing over a session restarted from the results
+   * screen, or after quitting to the map). Already-playing voices finish
+   * naturally (they are under a second long).
+   */
+  function cancelSequences() {
+    for (const id of sequenceTimers) {
+      clearTimer(id);
     }
+    sequenceTimers.clear();
   }
 
   function applyMasterGain() {

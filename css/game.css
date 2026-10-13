@@ -873,7 +873,7 @@ body {
 .game-screen.is-intro .banner-rope { opacity: 0; }
 
 /* The ONE question card, built on the cleaned artwork asset
-   (assets/ui/question-card.png + question-card-compact.png). All text is
+   (assets/ui/question-card.webp + question-card-compact.png). All text is
    live HTML positioned over the art's blank badge/pill/track with
    container-query units, so overlay and artwork stay aligned at every
    responsive width. The card is fixed-positioned and moved purely via
@@ -911,7 +911,7 @@ body {
   background-size: 100% 100%;
   transition: opacity 320ms ease;
 }
-.qc-art-intro { background-image: url("../assets/ui/question-card.png"); }
+.qc-art-intro { background-image: url("../assets/ui/question-card.webp"); }
 /* The compact artwork is drawn as a CSS nine-slice: the leafy corners
    keep their native proportions while the parchment middle stretches,
    so the taller/larger banner never distorts the frame or leaves. */
@@ -1051,7 +1051,7 @@ body {
 }
 
 /* Countdown progress — amber fill inside the artwork's dark slot. The
-   geometry is measured from assets/ui/question-card.png (1672×941): slot
+   geometry is measured from assets/ui/question-card.webp (1672×941): slot
    interior x 374–1302, y 739–786; the box below is that slot inset ~6px
    (≈0.36cqw) so the fill never touches the gold rails at any percentage. */
 .qc-progress {

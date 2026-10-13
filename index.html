@@ -143,54 +143,43 @@
     <!-- GAME -->
     <section id="screen-game" class="screen game-screen" hidden>
 
-      <!-- Top HUD: logo · round progress · points/hearts/timer/pause -->
+      <!-- Top HUD: one compact arcade bar — level · round | score · combo ·
+           hearts | timer · pause — with a thin lesson-progress strip on its
+           lower edge. -->
       <header class="hud" aria-label="Game status">
-        <div class="hud-logo" aria-hidden="true">
-          <div class="logo-signboard logo-sm">
-            <div class="logo-ropes"><i></i><i></i></div>
-            <div class="logo-plank">
-              <span class="logo-leaf leaf-l"></span>
-              <span class="logo-word">Word</span>
-              <span class="logo-slice">Slice</span>
-              <span class="logo-leaf leaf-r"></span>
-            </div>
+        <div class="hud-inner">
+          <div class="hud-zone hud-left">
+            <span class="hud-level" title="Current level">
+              <span class="hud-level-num" id="hud-level-value">1</span>
+              <span class="hud-level-copy">
+                <span class="hud-level-caption">Level</span>
+                <span class="hud-round">Round <b id="hud-round-value">1/10</b></span>
+              </span>
+            </span>
+          </div>
+
+          <div class="hud-zone hud-center">
+            <span id="hud-score" class="hud-chip chip-score" title="Score">⭐ <b id="hud-score-value">0</b></span>
+            <span id="hud-combo" class="hud-chip chip-combo" title="Combo streak">🔥 <b id="hud-combo-value">—</b></span>
+            <span id="hud-hearts" class="hud-chip hud-hearts" aria-live="polite"></span>
+          </div>
+
+          <div class="hud-zone hud-right">
+            <span id="hud-timer" class="hud-chip chip-timer" title="Play time">⏱ <b id="hud-timer-value">0:00</b></span>
+            <button id="btn-pause" class="btn-round btn-pause" type="button" aria-label="Pause">
+              <span aria-hidden="true">❚❚</span>
+            </button>
           </div>
         </div>
 
-        <div class="hud-progress" aria-live="polite">
-          <span id="hud-question" class="hud-progress-text"></span>
-          <span class="progress-track"><span id="hud-progress-fill" class="progress-fill"></span></span>
-          <span id="hud-lesson-sub" class="hud-progress-sub"></span>
-        </div>
-
-        <div class="hud-group hud-right">
-          <span id="hud-score" class="hud-chip chip-score" title="Points">⭐ <b id="hud-score-value">0</b></span>
-          <span id="hud-timer" class="hud-chip chip-timer" title="Play time">⏱ <b id="hud-timer-value">0:00</b></span>
-          <span id="hud-hearts" class="hud-chip hud-hearts" aria-live="polite"></span>
-          <button id="btn-pause" class="btn-round btn-pause" type="button" aria-label="Pause">
-            <span aria-hidden="true">❚❚</span>
-          </button>
+        <!-- Thin lesson-completion indicator along the HUD's lower edge -->
+        <div id="hud-progress-track" class="hud-progress-track" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="hud-progress-fill" class="hud-progress-fill"></span>
         </div>
       </header>
 
-      <!-- Side panels (desktop) + question banner + playfield -->
+      <!-- Question banner + playfield (score/combo live in the top HUD) -->
       <div class="game-layout">
-
-        <aside class="side-panels" aria-hidden="true">
-          <div class="side-panel panel-score">
-            <span class="side-label">Score</span>
-            <span id="panel-score" class="side-value value-score">0</span>
-          </div>
-          <div class="side-panel panel-combo">
-            <span class="side-label">Combo</span>
-            <span id="panel-streak" class="side-value value-combo">—</span>
-          </div>
-          <div class="side-panel panel-best">
-            <span class="side-label">Best score</span>
-            <span id="panel-best" class="side-value value-best">0</span>
-          </div>
-        </aside>
-
         <div class="game-main">
           <div class="banner-hang" aria-live="polite">
             <i class="banner-rope rope-l"></i><i class="banner-rope rope-r"></i>
@@ -234,24 +223,18 @@
                     <button id="btn-restart" class="btn btn-wood" type="button">Restart</button>
                     <button id="btn-quit" class="btn btn-wood" type="button">Level map</button>
                   </div>
+                  <div class="pause-row pause-row-tools">
+                    <button id="btn-pause-help" class="btn btn-wood" type="button">? Help</button>
+                    <button id="btn-pause-settings" class="btn btn-wood" type="button">⚙ Settings</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Bottom controls: compact help + settings only (no fake power-ups) -->
-      <footer class="power-bar power-bar-compact" aria-label="Game controls">
-        <button id="pw-help" class="power-btn" type="button" aria-label="How to play">
-          <span class="power-icon" aria-hidden="true">?</span>
-          <span class="power-name">Help</span>
-        </button>
-        <button id="pw-settings" class="power-btn" type="button" aria-label="Settings">
-          <span class="power-icon" aria-hidden="true">⚙</span>
-          <span class="power-name">Settings</span>
-        </button>
-      </footer>
+      <!-- Help and Settings live in the pause menu — no permanent bottom bar,
+           so the playfield extends to the bottom of the screen. -->
     </section>
 
     <!-- ROUND FEEDBACK -->

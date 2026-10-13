@@ -39,11 +39,19 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+html {
+  /* Canvas base color: painted below everything, including the negative
+     z-index scenery layer, so it shows only while the artwork loads. */
+  background: var(--bg);
+}
+
+body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--bg);
+  /* Transparent on purpose: an opaque body background would paint OVER
+     .game-background (z-index: -1) and hide the scenery entirely. */
+  background: transparent;
   color: var(--ink);
   font-family: var(--font);
   -webkit-text-size-adjust: 100%;

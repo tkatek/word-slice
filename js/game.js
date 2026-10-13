@@ -35,6 +35,7 @@ import {
   totalStars,
   passedLevelCount,
   recordLevelResult,
+  resetLevelBestScore,
 } from './progress.js';
 import {
   RoundIntroScheduler,
@@ -89,6 +90,10 @@ const els = {
   volumeValue: $('volume-value'),
   btnResetBest: $('btn-reset-best'),
   achievementsList: $('achievements-list'),
+  confirmOverlay: $('confirm-overlay'),
+  confirmText: $('confirm-text'),
+  btnConfirmCancel: $('btn-confirm-cancel'),
+  btnConfirmReset: $('btn-confirm-reset'),
   tutorialOverlay: $('tutorial-overlay'),
   tutorialSteps: $('tutorial-steps'),
   btnTutorialSkip: $('btn-tutorial-skip'),
@@ -137,7 +142,14 @@ const els = {
   rsSubtitle: $('rs-subtitle'),
   rsStats: $('rs-stats'),
   rsReview: $('rs-review'),
+  rsReviewSub: $('rs-review-sub'),
+  rsReviewGrid: $('rs-review-grid'),
+  btnReviewAll: $('btn-review-all'),
+  rsReviewOverlay: $('rs-review-overlay'),
+  rsReviewList: $('rs-review-list'),
+  btnReviewClose: $('btn-review-close'),
   btnNextLevel: $('btn-next-level'),
+  btnNextLevelLabel: $('btn-next-level-label'),
   btnAgain: $('btn-again'),
   btnMenu: $('btn-menu'),
 };
@@ -260,6 +272,115 @@ function closeAppOverlay(overlayEl) {
   audioManager.setSuspended(false); // safe either way: results/menus never suspend
   processEngineEvents();
   refreshView();
+}
+
+/* ------------------------------------------------------------------ */
+/* Premium dialogs (Settings / How to Play / reset confirm): proper    */
+/* dialog behavior — focus lands on the primary control, Tab cycles    */
+/* inside the panel, Escape closes, and focus returns to the invoking  */
+/* control. Settings and How to Play swap places (never stacked        */
+/* interactively); Got it! returns to Settings when that was the       */
+/* entry point. Single static elements — no duplicate instances.       */
+/* ------------------------------------------------------------------ */
+
+let overlayReturnFocus = null;
+let howOpenedFromSettings = false;
+
+function activeElementOr(el) {
+  return el instanceof HTMLElement ? el
+    : (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+}
+
+function focusablesIn(root) {
+  return [...root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled);
+}
+
+/** Keeps Tab inside the open panel (keydown on the overlay element). */
+function trapOverlayTab(overlayEl, ev) {
+  const focusables = focusablesIn(overlayEl);
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  if (ev.shiftKey) {
+    if (active === first || !overlayEl.contains(active)) {
+      ev.preventDefault();
+      last.focus();
+    }
+  } else if (active === last || !overlayEl.contains(active)) {
+    ev.preventDefault();
+    first.focus();
+  }
+}
+
+function openSettingsPanel(fromEl) {
+  overlayReturnFocus = activeElementOr(fromEl);
+  howOpenedFromSettings = false;
+  renderAchievements();
+  syncAudioSettingsUi();
+  openAppOverlay(els.settingsOverlay);
+  els.btnSettingsClose.focus({ preventScroll: true });
+}
+
+function closeSettingsPanel() {
+  closeAppOverlay(els.settingsOverlay);
+  howOpenedFromSettings = false;
+  if (overlayReturnFocus) {
+    overlayReturnFocus.focus({ preventScroll: true });
+    overlayReturnFocus = null;
+  }
+}
+
+function openHowPanel(fromSettings) {
+  if (!fromSettings) overlayReturnFocus = activeElementOr(null);
+  howOpenedFromSettings = Boolean(fromSettings);
+  if (fromSettings) els.settingsOverlay.hidden = true; // swap, not a stack
+  openAppOverlay(els.menuHowOverlay);
+  els.btnMenuHowClose.focus({ preventScroll: true });
+}
+
+function closeHowPanel() {
+  closeAppOverlay(els.menuHowOverlay);
+  if (howOpenedFromSettings) {
+    howOpenedFromSettings = false;
+    // Reading the rules from Settings returns to Settings afterwards.
+    renderAchievements();
+    syncAudioSettingsUi();
+    openAppOverlay(els.settingsOverlay);
+    els.btnSettingsHow.focus({ preventScroll: true });
+    return;
+  }
+  if (overlayReturnFocus) {
+    overlayReturnFocus.focus({ preventScroll: true });
+    overlayReturnFocus = null;
+  }
+}
+
+/* The reset target: the session's level when one is live, otherwise the
+   level the player is currently working on (the same one the automatic
+   session plays). Settings is only reachable from menu screens where no
+   session is live, so without this fallback the control would be dead. */
+function resetTargetLevel() {
+  if (currentLevel) return currentLevel;
+  return levelQuestions ? autoLevelChoice() : null;
+}
+
+/* The confirm alertdialog opens above Settings (settings stays open
+   underneath but is fully covered — no interaction leaks through). */
+function openResetConfirm() {
+  const level = resetTargetLevel();
+  if (!level) return;
+  els.confirmText.textContent =
+    `This clears the best score for Level ${level.order}: “${level.title}”. `
+    + 'Stars, unlocked levels and achievements are kept.';
+  els.confirmOverlay.hidden = false;
+  els.btnConfirmCancel.focus({ preventScroll: true });
+}
+
+function closeResetConfirm() {
+  els.confirmOverlay.hidden = true;
+  els.btnResetBest.focus({ preventScroll: true });
 }
 
 /* ------------------------------------------------------------------ */
@@ -715,7 +836,8 @@ const intro = new RoundIntroScheduler({
 let lastCountdownSecond = -1;
 
 function appOverlayOpen() {
-  return !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden || !els.tutorialOverlay.hidden;
+  return !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden
+    || !els.confirmOverlay.hidden || !els.tutorialOverlay.hidden;
 }
 
 /** Countdown/flight may only advance on visible, unpaused gameplay. */
@@ -773,7 +895,11 @@ function fitCompactQuestion(force = false) {
   const rootStyle = document.documentElement.style;
   rootStyle.setProperty('--qc-extra', '0px'); // measure against the base height
   const gap = parseFloat(getComputedStyle(els.qcBody).rowGap) || 0;
-  const needed = els.questionPrompt.offsetHeight + els.questionWave.offsetHeight + gap;
+  // The wave line must be measured by its CONTENT (scrollHeight): inside the
+  // over-full flex column its offsetHeight is already crushed to 0 (its
+  // overflow:hidden makes it shrinkable), which made the fit reserve no
+  // space for it and permanently hid the wave line on wrapped prompts.
+  const needed = els.questionPrompt.offsetHeight + els.questionWave.scrollHeight + gap;
   const available = els.qcBody.clientHeight; // forces layout at extra = 0
   const extra = Math.max(0, Math.ceil((needed - available) / 2) * 2);
   rootStyle.setProperty('--qc-extra', `${extra}px`);
@@ -1262,6 +1388,14 @@ function processEngineEvents() {
         ]);
         break;
       }
+      case 'fruitSpawned':
+        // One combined fwoop per launch group: the manifest cooldown swallows
+        // the wave's 120 ms-spaced siblings, while clearly separate waves
+        // retrigger with a fresh variation. Audio only — spawning itself is
+        // owned entirely by the engine, and a paused gameplay bus (or a
+        // failed audio load) simply skips the sound.
+        audioManager.play('fruitThrow');
+        break;
       case 'targetMissed':
         deathDetails.set(event.fruitId, { kind: 'miss', dirX: 0, dirY: 1 });
         addFloatNote(event.x, Math.min(event.y, (engine.playfield.h || 400) - 30), 'missed', 'miss-note');
@@ -1409,32 +1543,172 @@ function showFeedback(report) {
   clearGesture();
 }
 
+/* Star shape shared by the results rating (level-map icon path). */
+const RS_STAR_PATH = 'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
+
+/** Three large SVG stars: earned ones in bright gold, the rest in muted
+    stone gray. The gradients live in the #screen-results SVG defs. */
 function renderStars(stars) {
   els.rsStars.replaceChildren();
   for (let i = 0; i < 3; i++) {
+    const earned = i < stars;
     const star = document.createElement('span');
-    star.className = i < stars ? 'star earned' : 'star';
-    star.textContent = '⭐';
+    star.className = earned ? 'rs-star is-earned' : 'rs-star';
+    star.innerHTML =
+      `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">` +
+      `<path d="${RS_STAR_PATH}" fill="url(#rs-star-${earned ? 'gold' : 'gray'})"` +
+      ` stroke="${earned ? '#8a5a2b' : '#43545c'}" stroke-width="1.1" stroke-linejoin="round"/>` +
+      (earned
+        ? '<path d="M12 4.6 10.05 8.9l-4.6.42 3.5 3-1.05 4.5L12 14.7V4.6z" fill="rgba(255,255,255,0.42)"/>'
+        : '') +
+      `</svg>`;
     els.rsStars.append(star);
   }
+  els.rsStars.setAttribute('aria-label', `${stars} of 3 stars`);
+}
+
+/* Constant, trusted icon markup for the statistics rows and mistake
+   cards (never built from game data — words are always inserted via
+   textContent). */
+const RS_STAT_ICONS = {
+  score: `<svg viewBox="0 0 24 24"><path d="${RS_STAR_PATH}" fill="currentColor"/></svg>`,
+  rounds: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8.2 12.4l2.6 2.6 5.2-5.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  completed: '<svg viewBox="0 0 24 24"><path d="M6.4 21V3.6m0 .4c2-1.5 4-1.5 5.8 0s3.8 1.5 5.8 0v9c-2 1.5-4 1.5-5.8 0s-3.8-1.5-5.8 0" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  correct: '<svg viewBox="0 0 24 24"><path d="M4.8 12.6l4.4 4.4L19.2 6.6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  wrong: '<svg viewBox="0 0 24 24"><path d="M6.6 6.6l10.8 10.8M17.4 6.6L6.6 17.4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
+  missed: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+  avoided: '<svg viewBox="0 0 24 24"><path d="M12 2.9 5.2 5.6v5c0 4.5 2.9 8 6.8 9.5 3.9-1.5 6.8-5 6.8-9.5v-5L12 2.9z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 12l2.2 2.2L15.4 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  streak: '<svg viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67z" fill="currentColor"/></svg>',
+  accuracy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2.6v3.6M12 17.8v3.6M2.6 12h3.6M17.8 12h3.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>',
+};
+
+/** One statistics row: colored icon chip + dark-brown label + bold value. */
+function rsStatRow(icon, label, value, tone) {
+  const row = document.createElement('div');
+  row.className = 'rs-stat';
+  const ico = document.createElement('span');
+  ico.className = `rs-stat-ico ${icon}`;
+  ico.innerHTML = RS_STAT_ICONS[icon];
+  const dt = document.createElement('dt');
+  dt.className = 'rs-stat-label';
+  dt.textContent = label;
+  const dd = document.createElement('dd');
+  dd.className = `rs-stat-value ${tone}`;
+  dd.textContent = value;
+  row.append(ico, dt, dd);
+  return row;
+}
+
+/** Builds one compact mistake card. `clampText` shortens the preview
+    explanation (the full-review overlay always shows everything). */
+function rsMistakeCard(mistake, opts = {}) {
+  const card = document.createElement('article');
+  card.className = 'rs-mistake';
+
+  const head = document.createElement('div');
+  head.className = 'rs-mistake-head';
+  const ico = document.createElement('span');
+  ico.className = `rs-mistake-ico ${mistake.wrongSelections.length ? 'is-wrong' : 'is-missed'}`;
+  ico.innerHTML = mistake.wrongSelections.length ? RS_STAT_ICONS.wrong : RS_STAT_ICONS.missed;
+  const q = document.createElement('h4');
+  q.className = 'rs-mistake-q';
+  q.textContent = mistake.prompt;
+  head.append(ico, q);
+  card.append(head);
+
+  const line = (kind, intro, words) => {
+    const p = document.createElement('p');
+    p.className = `rs-mistake-line ${kind}`;
+    p.append(`${intro} `);
+    for (const [i, word] of words.entries()) {
+      if (i > 0) p.append(', ');
+      const b = document.createElement('b');
+      b.textContent = word;
+      p.append(b);
+    }
+    card.append(p);
+  };
+  if (mistake.wrongSelections.length) line('is-wrong', 'Wrongly sliced:', mistake.wrongSelections);
+  if (mistake.missedCorrect.length) line('is-missed', 'Missed:', mistake.missedCorrect);
+
+  const why = document.createElement('p');
+  why.className = 'rs-mistake-why';
+  if (opts.clamp) why.classList.add('is-clamped');
+  why.textContent = mistake.explanation;
+  card.append(why);
+  return card;
+}
+
+/**
+ * Picks the most useful preview mistakes for the compact summary:
+ * distinct prompts first (repeated question texts read as duplicates),
+ * wrong slices ranked ahead of missed-only rounds, original order kept
+ * within the selection.
+ */
+function pickMistakePreviews(mistakes, max = 3) {
+  const rank = (m) => (m.wrongSelections.length > 0 ? 0 : 1);
+  const withIndex = mistakes.map((m, index) => ({ m, index }));
+  withIndex.sort((a, b) => rank(a.m) - rank(b.m) || a.index - b.index);
+  const chosen = [];
+  const usedPrompts = new Set();
+  for (const entry of withIndex) {
+    if (chosen.length >= max) break;
+    if (usedPrompts.has(entry.m.prompt)) continue;
+    usedPrompts.add(entry.m.prompt);
+    chosen.push(entry);
+  }
+  for (const entry of withIndex) {
+    if (chosen.length >= max) break;
+    if (!chosen.includes(entry)) chosen.push(entry);
+  }
+  chosen.sort((a, b) => a.index - b.index);
+  return chosen.map((entry) => entry.m);
+}
+
+/* Full-review overlay (every mistake, complete explanations). */
+let reviewMistakes = [];
+/** What the contextual gold button does for the shown result. */
+let nextLevelAction = 'retry';
+
+function openReviewOverlay() {
+  if (!reviewMistakes.length) return;
+  els.rsReviewList.replaceChildren();
+  for (const [i, mistake] of reviewMistakes.entries()) {
+    const card = rsMistakeCard(mistake);
+    const num = document.createElement('span');
+    num.className = 'rs-mistake-num';
+    num.textContent = String(i + 1);
+    card.querySelector('.rs-mistake-head').prepend(num);
+    els.rsReviewList.append(card);
+  }
+  els.rsReviewOverlay.hidden = false;
+  els.rsReviewList.scrollTop = 0;
+  els.btnReviewClose.focus({ preventScroll: true });
+}
+
+function closeReviewOverlay() {
+  if (els.rsReviewOverlay.hidden) return;
+  els.rsReviewOverlay.hidden = true;
+  if (!els.btnReviewAll.hidden) els.btnReviewAll.focus({ preventScroll: true });
 }
 
 function showResults(report) {
   const stars = starsFor(report);
+  const passed = report.completed && report.passStatus === 'passed';
   // Was the next level still locked before this result was recorded? (for
   // the unlock cue — must be captured before recordLevelResult mutates it)
   const next = nextLevel(report.lessonId);
   const nextWasUnlocked = next ? isLevelUnlocked(progress, next.id) : false;
-  els.rsTitle.textContent = report.completed ? 'Level complete!' : 'Session ended early';
-  let subtitle;
-  if (!report.completed) {
-    subtitle = 'You ran out of hearts. The level was not completed.';
-  } else if (report.passStatus === 'passed') {
-    subtitle = `Passed — ${report.successfulRounds} of ${report.totalRounds} rounds clear.`;
-  } else {
-    subtitle = `Keep practicing — ${report.successfulRounds} of ${report.totalRounds} rounds clear. You need ${TUNING.PASS_SUCCESSFUL_ROUNDS} to pass.`;
-  }
-  els.rsSubtitle.textContent = subtitle;
+
+  // Banner + contextual message reflect the real outcome — never the same
+  // title for every ending.
+  els.rsTitle.textContent = !report.completed ? 'Session Ended Early'
+    : passed ? 'Level Complete!' : 'Keep Practicing!';
+  els.rsSubtitle.textContent = !report.completed
+    ? 'You ran out of hearts. The level was not completed.'
+    : passed
+      ? 'Excellent work! You completed the level.'
+      : `Keep practicing — ${report.successfulRounds} of ${report.totalRounds} rounds clear. You need ${TUNING.PASS_SUCCESSFUL_ROUNDS} to pass.`;
   renderStars(stars);
 
   // Record progress (stars, unlocks, achievements) against the level.
@@ -1451,9 +1725,6 @@ function showResults(report) {
   writeProgress(window.localStorage, progress);
   sessionBestScore = Number(progress.levels[report.lessonId]?.bestScore) || 0;
   if (newlyEarned.length) queueAchievementToasts(newlyEarned);
-
-  // Next level button: real unlock state only.
-  els.btnNextLevel.hidden = !(next && isLevelUnlocked(progress, next.id));
 
   // Coherent celebration: jingle → stars → unlock → achievements, spaced
   // instead of stacked (the manager drops anything that would mush).
@@ -1486,59 +1757,61 @@ function showResults(report) {
   }
   audioManager.playSequence(celebration);
 
+  // Level Summary: every number comes straight from the engine report.
+  // Positive values read deep teal; meaningful error counts read red.
   const percent = (value) => (value === null ? '—' : `${Math.round(value * 100)}%`);
+  const errorTone = (count) => (count > 0 ? 'is-error' : 'is-plain');
   const rows = [
-    ['Final score', report.score],
-    ['Successful rounds', `${report.successfulRounds}/${report.totalRounds}`],
-    ['Completed rounds', `${report.completedRounds}/${report.totalRounds}`],
-    ['Correct slices', report.correctSlices],
-    ['Wrong slices', report.wrongSlices],
-    ['Missed correct targets', report.missedTargets],
-    ['Avoided distractors', report.avoidedDistractors],
-    ['Best streak', report.bestStreak],
-    ['Slice accuracy', percent(report.accuracy)],
+    ['score', 'Final Score', `${report.score}`, 'is-positive is-score'],
+    ['rounds', 'Successful Rounds', `${report.successfulRounds}/${report.totalRounds}`, 'is-positive'],
+    ['completed', 'Completed Rounds', `${report.completedRounds}/${report.totalRounds}`, 'is-positive'],
+    ['correct', 'Correct Slices', `${report.correctSlices}`, 'is-positive'],
+    ['wrong', 'Wrong Slices', `${report.wrongSlices}`, errorTone(report.wrongSlices)],
+    ['missed', 'Missed Correct Targets', `${report.missedTargets}`, errorTone(report.missedTargets)],
+    ['avoided', 'Avoided Distractors', `${report.avoidedDistractors}`, 'is-positive'],
+    ['streak', 'Best Streak', `${report.bestStreak}`, 'is-positive'],
+    ['accuracy', 'Slice Accuracy', percent(report.accuracy), 'is-positive'],
   ];
-  els.rsStats.textContent = '';
-  for (const [label, value] of rows) {
-    const dt = document.createElement('dt');
-    dt.textContent = label;
-    const dd = document.createElement('dd');
-    dd.textContent = value;
-    els.rsStats.append(dt, dd);
+  els.rsStats.replaceChildren();
+  for (const [icon, label, value, tone] of rows) {
+    els.rsStats.append(rsStatRow(icon, label, value, tone));
   }
 
-  els.rsReview.textContent = '';
-  const heading = document.createElement('h3');
-  heading.textContent = 'Mistake review';
-  els.rsReview.append(heading);
+  // Mistake Review: three compact previews; everything stays reachable
+  // through the full-review overlay.
+  reviewMistakes = report.mistakes;
+  els.rsReviewGrid.replaceChildren();
   if (report.mistakes.length === 0) {
+    els.rsReviewSub.hidden = true;
+    els.btnReviewAll.hidden = true;
     const p = document.createElement('p');
-    p.textContent = report.completed ? 'No mistakes — great run!' : 'No mistakes recorded.';
-    els.rsReview.append(p);
+    p.className = 'rs-review-perfect';
+    p.textContent = 'Perfect! No mistakes to review.';
+    els.rsReviewGrid.append(p);
   } else {
-    for (const mistake of report.mistakes) {
-      const item = document.createElement('div');
-      item.className = 'review-item';
-      const h = document.createElement('h3');
-      h.textContent = mistake.prompt;
-      item.append(h);
-      if (mistake.wrongSelections.length) {
-        const p = document.createElement('p');
-        p.textContent = `Wrongly sliced: ${mistake.wrongSelections.join(', ')}`;
-        item.append(p);
-      }
-      if (mistake.missedCorrect.length) {
-        const p = document.createElement('p');
-        p.textContent = `Missed: ${mistake.missedCorrect.join(', ')}`;
-        item.append(p);
-      }
-      const why = document.createElement('p');
-      why.className = 'muted';
-      why.textContent = mistake.explanation;
-      item.append(why);
-      els.rsReview.append(item);
+    els.rsReviewSub.hidden = false;
+    const previews = pickMistakePreviews(report.mistakes, 3);
+    for (const mistake of previews) {
+      els.rsReviewGrid.append(rsMistakeCard(mistake, { clamp: true }));
     }
+    els.btnReviewAll.hidden = report.mistakes.length <= previews.length;
+    els.btnReviewAll.textContent = `Review All Mistakes (${report.mistakes.length})`;
   }
+
+  // Contextual gold action: advance only when the next level is really
+  // unlocked; never push a failed session forward.
+  if (passed && next && isLevelUnlocked(progress, next.id)) {
+    nextLevelAction = 'next';
+    els.btnNextLevelLabel.textContent = 'Next Level';
+  } else if (passed && !next) {
+    nextLevelAction = 'replay';
+    els.btnNextLevelLabel.textContent = 'Play Again';
+  } else {
+    nextLevelAction = 'retry';
+    els.btnNextLevelLabel.textContent = 'Try Again';
+  }
+
+  closeReviewOverlay(); // a fresh result never inherits an open review
   clearTransientFx();
   clearFruitVisuals();
   setScreen('results');
@@ -1746,22 +2019,49 @@ function quitToLevels() {
 /* Achievements list (settings)                                        */
 /* ------------------------------------------------------------------ */
 
+/* One colorful hand-drawn-style icon per achievement (pure local SVG —
+   no external artwork). Locked rows gray them via CSS. */
+const ACHIEVEMENT_ICONS = {
+  'first-lesson': '<svg viewBox="0 0 24 24"><path d="M6 21V3.5" fill="none" stroke="#2f7d32" stroke-width="2" stroke-linecap="round"/><path d="M6 4.5h10.5l-2.8 4 2.8 4H6z" fill="#66bb6a" stroke="#2f7d32" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  'first-three-star': '<svg viewBox="0 0 24 24"><path d="M12 3.2 14.8 9l6.2.6-4.7 4.1 1.4 6.1L12 16.6l-5.7 3.2 1.4-6.1L3 9.6 9.2 9z" fill="#ffcf3d" stroke="#b8860b" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5.6v10.2" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  'five-in-a-row': '<svg viewBox="0 0 24 24"><path d="M13.5 1.5s.8 2.8.8 5c0 2.1-1.4 3.9-3.6 3.9-2.1 0-3.7-1.8-3.7-3.9l.03-.4C5.3 8 4 11.2 4 14.6c0 4.4 3.6 8 8 8s8-3.6 8-8c0-5.4-2.6-10.3-6.5-13.1z" fill="#ff8a2a" stroke="#c2410c" stroke-width="1.2"/><path d="M11.7 19c-1.5 0-2.7-1.2-2.7-2.6 0-1.3.9-2.2 2.3-2.6 1.5-.3 3-1 3.9-2.1.3 1.1.4 2.2.4 3.4 0 2.2-1.8 3.9-3.9 3.9z" fill="#ffe08a"/></svg>',
+  'five-levels': '<svg viewBox="0 0 24 24"><g fill="none" stroke="#0f5f70" stroke-width="1.7"><rect x="3.5" y="4.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="4.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="14.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="14.5" width="7" height="7" rx="1.5"/></g><g fill="#3aa5b8"><rect x="5.5" y="6.5" width="3" height="3" rx="0.8"/><rect x="15.5" y="6.5" width="3" height="3" rx="0.8"/><rect x="5.5" y="16.5" width="3" height="3" rx="0.8"/><rect x="15.5" y="16.5" width="3" height="3" rx="0.8"/></g></svg>',
+  'beginner-stage': '<svg viewBox="0 0 24 24"><path d="M12 3.5 1.8 8.4 12 13.3l10.2-4.9z" fill="#0f5f70" stroke="#0a4351" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.6 11v4.3c0 1.5 2.4 2.7 5.4 2.7s5.4-1.2 5.4-2.7V11" fill="none" stroke="#0a4351" stroke-width="1.7" stroke-linecap="round"/><path d="M20.4 9v5.4" fill="none" stroke="#c9a24e" stroke-width="1.7" stroke-linecap="round"/><circle cx="20.4" cy="15.8" r="1.3" fill="#c9a24e"/></svg>',
+};
+
+const ACH_STATE_MARKUP = {
+  earned: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 12.5l5 5 10-10.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Earned',
+  locked: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2a5 5 0 0 0-5 5v3H6.5A2.5 2.5 0 0 0 4 12.5v6A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-6A2.5 2.5 0 0 0 17.5 10H17V7a5 5 0 0 0-5-5zm3 8H9V7a3 3 0 0 1 6 0v3z" fill="currentColor"/></svg>Locked',
+};
+
 function renderAchievements() {
   els.achievementsList.replaceChildren();
   for (const def of ACHIEVEMENTS) {
-    const li = document.createElement('li');
     const earned = Boolean(progress.achievements[def.id]);
-    if (earned) li.className = 'is-earned';
-    const icon = document.createElement('span');
-    icon.className = 'ach-icon';
-    icon.textContent = '🏆';
+    const li = document.createElement('li');
+    if (earned) li.classList.add('is-earned');
+
+    const medal = document.createElement('span');
+    medal.className = 'ach-medal';
+    medal.setAttribute('aria-hidden', 'true');
+    medal.innerHTML = ACHIEVEMENT_ICONS[def.id] || ACHIEVEMENT_ICONS['first-three-star'];
+
+    const info = document.createElement('span');
+    info.className = 'ach-info';
     const name = document.createElement('span');
     name.className = 'ach-name';
     name.textContent = def.name;
     const desc = document.createElement('span');
     desc.className = 'ach-desc';
-    desc.textContent = earned ? def.description : `? — ${def.description}`;
-    li.append(icon, name, desc);
+    desc.textContent = def.description; // same wording earned or locked — the medal shows the state
+    info.append(name, desc);
+
+    const state = document.createElement('span');
+    state.className = 'ach-state';
+    state.innerHTML = earned ? ACH_STATE_MARKUP.earned : ACH_STATE_MARKUP.locked;
+    state.title = earned ? 'Achievement earned' : 'Not earned yet';
+
+    li.append(medal, info, state);
     els.achievementsList.append(li);
   }
 }
@@ -1773,11 +2073,12 @@ function renderAchievements() {
 /** Reflects the manager's persisted settings into the settings overlay. */
 function syncAudioSettingsUi() {
   const on = audioManager.isEffectsOn();
-  els.btnSoundToggle.textContent = on ? 'On' : 'Off';
-  els.btnSoundToggle.setAttribute('aria-pressed', String(on));
+  els.btnSoundToggle.setAttribute('aria-checked', String(on));
   const percent = Math.round(audioManager.getEffectsVolume() * 100);
   els.rangeEffectsVolume.value = String(percent);
   els.rangeEffectsVolume.disabled = !on;
+  // --vol drives the slider's gold fill so the track mirrors the value.
+  els.rangeEffectsVolume.style.setProperty('--vol', `${percent}%`);
   els.volumeValue.textContent = `${percent}%`;
 }
 
@@ -1849,36 +2150,50 @@ function init() {
   els.btnHeroLevels.addEventListener('click', goLevels);
   els.btnPlay.addEventListener('click', () => beginLevel(continueTarget(progress)));
 
-  const openHow = () => openAppOverlay(els.menuHowOverlay);
-  els.btnMenuHow.addEventListener('click', openHow);
-  els.btnLevelsHow.addEventListener('click', openHow);
-  els.btnHeroHow.addEventListener('click', openHow);
-  els.btnMenuHowClose.addEventListener('click', () => closeAppOverlay(els.menuHowOverlay));
+  els.btnMenuHow.addEventListener('click', () => openHowPanel(false));
+  els.btnLevelsHow.addEventListener('click', () => openHowPanel(false));
+  els.btnHeroHow.addEventListener('click', () => openHowPanel(false));
+  els.btnMenuHowClose.addEventListener('click', closeHowPanel);
 
-  const openSettings = () => {
-    renderAchievements();
-    syncAudioSettingsUi();
-    openAppOverlay(els.settingsOverlay);
-  };
-  els.btnMenuSettings.addEventListener('click', openSettings);
-  els.btnLevelsSettings.addEventListener('click', openSettings);
-  els.btnSettingsClose.addEventListener('click', () => closeAppOverlay(els.settingsOverlay));
-  els.btnSettingsHow.addEventListener('click', () => {
-    els.settingsOverlay.hidden = true; // how-to stacks on top of settings
-    openAppOverlay(els.menuHowOverlay);
-  });
-  els.btnResetBest.addEventListener('click', () => {
-    if (!currentLevel) return;
-    const next = {
-      ...progress,
-      levels: { ...progress.levels, [currentLevel.id]: { bestStars: 0, bestScore: 0, plays: 0, passed: false, last: null } },
-    };
-    progress = next;
+  els.btnMenuSettings.addEventListener('click', (ev) => openSettingsPanel(ev.currentTarget));
+  els.btnLevelsSettings.addEventListener('click', (ev) => openSettingsPanel(ev.currentTarget));
+  els.btnSettingsClose.addEventListener('click', closeSettingsPanel);
+  els.btnSettingsHow.addEventListener('click', () => openHowPanel(true));
+  els.btnResetBest.addEventListener('click', openResetConfirm);
+  els.btnConfirmCancel.addEventListener('click', closeResetConfirm);
+  els.btnConfirmReset.addEventListener('click', () => {
+    const level = resetTargetLevel();
+    if (!level) {
+      closeResetConfirm();
+      return;
+    }
+    // Surgical reset: only this level's best score. Stars, plays, the pass
+    // flag (and therefore level unlocking), achievements and every other
+    // level's record stay untouched — resetting a best score must never
+    // re-lock levels the player already earned.
+    progress = resetLevelBestScore(progress, level.id);
     writeProgress(window.localStorage, progress);
-    sessionBestScore = 0;
-    closeAppOverlay(els.settingsOverlay);
+    if (currentLevel && currentLevel.id === level.id) sessionBestScore = 0;
+    els.confirmOverlay.hidden = true;
     showToast('Best score for this level reset.');
+    els.btnResetBest.focus({ preventScroll: true });
   });
+
+  // Dialog keyboard behavior per open overlay: Escape closes that dialog,
+  // Tab stays trapped inside it. (The tutorial overlay keeps its own
+  // Skip-driven flow and is untouched here.)
+  for (const overlayEl of [els.settingsOverlay, els.menuHowOverlay, els.confirmOverlay]) {
+    overlayEl.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        if (overlayEl === els.confirmOverlay) closeResetConfirm();
+        else if (overlayEl === els.menuHowOverlay) closeHowPanel();
+        else closeSettingsPanel();
+      } else if (ev.key === 'Tab') {
+        trapOverlayTab(overlayEl, ev);
+      }
+    });
+  }
 
   // Tutorial flow.
   els.btnTutorialNext.addEventListener('click', () => {
@@ -1928,14 +2243,32 @@ function init() {
     }
   });
 
-  // Results actions.
+  // Results actions. Retry Level and Level Map always restart/map; the
+  // gold button is contextual — it only advances when progression rules
+  // actually unlocked the next level.
   els.btnAgain.addEventListener('click', () => currentLevel && startGame(currentLevel));
   els.btnNextLevel.addEventListener('click', () => {
-    const next = currentLevel && nextLevel(currentLevel.id);
-    if (next) beginLevel(next);
+    if (nextLevelAction === 'next') {
+      const next = currentLevel && nextLevel(currentLevel.id);
+      if (next) {
+        beginLevel(next);
+        return;
+      }
+    }
+    if (currentLevel) startGame(currentLevel);
     else openLevelsScreen();
   });
   els.btnMenu.addEventListener('click', quitToLevels);
+
+  // Full mistake review overlay (opened from the compact summary).
+  els.btnReviewAll.addEventListener('click', openReviewOverlay);
+  els.btnReviewClose.addEventListener('click', closeReviewOverlay);
+  els.rsReviewOverlay.addEventListener('pointerdown', (ev) => {
+    if (ev.target === els.rsReviewOverlay) closeReviewOverlay(); // backdrop click
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') closeReviewOverlay();
+  });
 
   els.playfield.addEventListener('pointerdown', onPointerDown);
   els.playfield.addEventListener('pointermove', onPointerMove);

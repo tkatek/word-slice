@@ -312,6 +312,33 @@ describe('audio manager', () => {
     assert.equal(stats.byEvent.bladeWhoosh, 2);
   });
 
+  test('fruit launches group into one fwoop per staggered wave', async () => {
+    const { manager, clock } = await readyManager();
+    // A desktop wave: 4 fruits spawning 120 ms apart (engine SPAWN_STAGGER).
+    assert.equal(manager.play('fruitThrow'), true, 'first launch plays');
+    clock.advance(120);
+    assert.equal(manager.play('fruitThrow'), false, 'second fruit grouped');
+    clock.advance(120); // 240 ms since the wave began
+    assert.equal(manager.play('fruitThrow'), false, 'third fruit grouped');
+    clock.advance(120); // 360 ms since the wave began
+    assert.equal(manager.play('fruitThrow'), false, 'whole wave = one sound');
+    clock.advance(300); // next wave: well past the 380 ms grouping window
+    assert.equal(manager.play('fruitThrow'), true, 'separate wave sounds again');
+    const stats = manager.getStats();
+    assert.equal(stats.byEvent.fruitThrow, 2);
+    assert.equal(stats.skippedCooldown, 3);
+  });
+
+  test('fruit throw sits under the blade whoosh and the cut in the mix', () => {
+    const throwDef = AUDIO_MANIFEST.fruitThrow;
+    assert.ok(throwDef, 'fruitThrow must exist in the manifest');
+    assert.ok(throwDef.gain < AUDIO_MANIFEST.bladeWhoosh.gain, 'quieter than the blade');
+    assert.ok(throwDef.gain < AUDIO_MANIFEST.fruitCut.gain, 'quieter than the cut');
+    assert.equal(throwDef.bus, 'gameplay', 'blocked while paused');
+    assert.equal(throwDef.files.length, 3, 'three launch variations');
+    assert.ok(throwDef.cooldownMs >= 360, 'cooldown spans a 4-fruit wave stagger');
+  });
+
   test('muting silences immediately and persists; unmuting restores', async () => {
     const storage = fakeStorage();
     const { manager, clock } = await readyManager({ storage });

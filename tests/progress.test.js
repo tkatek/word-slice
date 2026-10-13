@@ -15,6 +15,7 @@ import {
   totalStars,
   passedLevelCount,
   recordLevelResult,
+  resetLevelBestScore,
 } from '../js/progress.js';
 
 function memoryStorage(initial = {}) {
@@ -154,6 +155,36 @@ test('ACHIEVEMENTS: three stars, streaks, five levels and stage graduation', () 
 
   p = recordLevelResult(p, 'level-05', passReport(), NOW).progress;
   assert.ok(p.achievements['five-levels']);
+});
+
+test('RESET BEST: clears only the score — stars, pass state, plays and other levels survive', () => {
+  let p = emptyProgress();
+  p = recordLevelResult(p, 'level-01', passReport({ score: 90, stars: 2 }), NOW).progress;
+  p = recordLevelResult(p, 'level-02', passReport({ score: 75, stars: 3 }), NOW).progress;
+  const before = JSON.parse(JSON.stringify(p));
+
+  const q = resetLevelBestScore(p, 'level-01');
+
+  assert.equal(q.levels['level-01'].bestScore, 0, 'the target score is cleared');
+  assert.equal(q.levels['level-01'].bestStars, 2, 'stars are kept');
+  assert.equal(q.levels['level-01'].passed, true, 'pass state is kept');
+  assert.equal(q.levels['level-01'].plays, 1, 'play count is kept');
+  assert.deepEqual(q.levels['level-01'].last, before.levels['level-01'].last, 'last session is kept');
+  assert.deepEqual(q.levels['level-02'], before.levels['level-02'], 'other levels are untouched');
+  assert.deepEqual(q.achievements, before.achievements, 'achievements are untouched');
+  assert.equal(q.tutorialDone, before.tutorialDone, 'tutorial flag is untouched');
+  assert.equal(isLevelUnlocked(q, 'level-02'), true, 'unlocked levels stay unlocked');
+  assert.equal(totalStars(q), totalStars(p), 'star totals are unchanged');
+  assert.deepEqual(p, before, 'the input progress object is not mutated');
+});
+
+test('RESET BEST: unknown levels and already-zero records return the same record', () => {
+  const p = recordLevelResult(emptyProgress(), 'level-01', passReport(), NOW).progress;
+  assert.equal(resetLevelBestScore(p, 'level-99'), p, 'no record is created for unknown levels');
+  const zeroed = resetLevelBestScore(p, 'level-01');
+  assert.equal(resetLevelBestScore(zeroed, 'level-01'), zeroed, 'a second reset is a no-op');
+  const empty = emptyProgress();
+  assert.equal(resetLevelBestScore(empty, 'level-01'), empty, 'empty progress stays empty');
 });
 
 test('MIGRATION: v1 legacy data is untouched and v2 starts clean', () => {

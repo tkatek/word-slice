@@ -90,6 +90,23 @@ export function continueTarget(progress) {
   return next || LEVELS[0];
 }
 
+/**
+ * Settings action: clears ONLY one level's best score. Stars, plays, the
+ * passed flag, the last-session record, achievements, the tutorial flag
+ * and every other level's record stay untouched, so level unlocking and
+ * earned stars are never affected. Levels without a record are returned
+ * unchanged (no record is created just to hold a zero).
+ * @returns {object} a NEW progress object; the input is not mutated
+ */
+export function resetLevelBestScore(progress, levelId) {
+  const rec = progress.levels[levelId];
+  if (!rec || !rec.bestScore) return progress;
+  return {
+    ...progress,
+    levels: { ...progress.levels, [levelId]: { ...rec, bestScore: 0 } },
+  };
+}
+
 export function totalStars(progress) {
   let stars = 0;
   for (const level of LEVELS) {

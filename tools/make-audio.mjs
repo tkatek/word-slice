@@ -481,6 +481,58 @@ const SOUNDS = [
     },
   },
 
+  /* ---------------- slicing: fruit throw / launch ----------------
+   *
+   * A quick playful "fwoop" as fruits launch from below the playfield:
+   *   A. a bright millisecond flick at the very start — the "f" of the
+   *      fwoop, the hand releasing the fruit (also what keeps the sound
+   *      from reading as plain wind, which has no attack);
+   *   B. an airy bandpass sweep that only RISES (320→2100 Hz): the blade
+   *      whooshes rise AND fall because a blade passes the ear — a thrown
+   *      object instead keeps accelerating away, so its air noise never
+   *      comes back down. This is the main cue separating throw from
+   *      whoosh;
+   *   C. a soft rounded tonal glide an octave up — the playful pitch
+   *      movement. Kept ~15% of the noise level so it warms the fwoop
+   *      without becoming a zappy laser glide;
+   *   D. a subtle soft pop near the end (short lowpassed splat + a tiny
+   *      150–190 Hz thump) as the fruit leaves the frame. Never an
+   *      impact: no heavy bass, no explosion-style body.
+   * Total 160–220 ms — energetic anticipation, clean fade-out. */
+  {
+    path: 'slicing/fruit-throw-1.wav', peak: 0.64,
+    render(buf, rng) {
+      // Classic fwoop: airy rise 320→2100 Hz, gentle tonal lift, soft pop.
+      add(buf, noiseBurst(0.02, rng, { amp: 0.34, type: 'hp', q: 0.8, sweep: [0.4, 1600, 3400, 2600], env: envAttackDecay(N(0.02), 0.0006, 0.008) }));
+      add(buf, noiseBurst(0.19, rng, { amp: 1.0, q: 1.3, sweep: [0.8, 320, 1900, 2100] }));
+      add(buf, tone(300, 640, 0.15, { amp: 0.17, tau: 0.06, attack: 0.02, partials: [[2, 0.22, 0.6]] }));
+      add(buf, splat(0.028, rng, { cutoffHz: 900, amp: 0.3 }), 0.14);
+      add(buf, tone(190, 150, 0.045, { amp: 0.15, tau: 0.018, attack: 0.002 }), 0.15);
+    },
+  },
+  {
+    path: 'slicing/fruit-throw-2.wav', peak: 0.62,
+    render(buf, rng) {
+      // Faster, brighter "fwip": shorter rise 420→2650 Hz, lighter pop.
+      add(buf, noiseBurst(0.016, rng, { amp: 0.3, type: 'hp', q: 0.9, sweep: [0.4, 2000, 3800, 3000], env: envAttackDecay(N(0.016), 0.0005, 0.007) }));
+      add(buf, noiseBurst(0.16, rng, { amp: 1.0, q: 1.45, sweep: [0.82, 420, 2400, 2650], env: envBell(N(0.16), 1.5, 2.6) }));
+      add(buf, tone(360, 800, 0.12, { amp: 0.15, tau: 0.05, attack: 0.015, partials: [[2, 0.2, 0.55]] }));
+      add(buf, splat(0.024, rng, { cutoffHz: 1050, amp: 0.26 }), 0.12);
+      add(buf, tone(210, 165, 0.04, { amp: 0.13, tau: 0.016, attack: 0.002 }), 0.13);
+    },
+  },
+  {
+    path: 'slicing/fruit-throw-3.wav', peak: 0.64,
+    render(buf, rng) {
+      // Rounder, warmer toss: slower rise 260→1650 Hz with a gentle flutter.
+      add(buf, noiseBurst(0.022, rng, { amp: 0.28, type: 'hp', q: 0.8, sweep: [0.4, 1300, 2800, 2200], env: envAttackDecay(N(0.022), 0.0007, 0.009) }));
+      add(buf, noiseBurst(0.22, rng, { amp: 1.0, q: 1.0, sweep: [0.78, 260, 1450, 1650], wobbleHz: 14, wobbleDepth: 0.12 }));
+      add(buf, tone(240, 520, 0.18, { amp: 0.19, tau: 0.07, attack: 0.025, partials: [[2, 0.25, 0.6]] }));
+      add(buf, splat(0.03, rng, { cutoffHz: 800, amp: 0.32 }), 0.16);
+      add(buf, tone(170, 135, 0.05, { amp: 0.16, tau: 0.02, attack: 0.002 }), 0.17);
+    },
+  },
+
   /* ---------------- feedback ---------------- */
   {
     path: 'feedback/correct.wav', peak: 0.8,
@@ -823,6 +875,9 @@ const DURATIONS = {
   'slicing/fruit-cut-1.wav': 0.24,
   'slicing/fruit-cut-2.wav': 0.27,
   'slicing/fruit-cut-3.wav': 0.22,
+  'slicing/fruit-throw-1.wav': 0.24,
+  'slicing/fruit-throw-2.wav': 0.22,
+  'slicing/fruit-throw-3.wav': 0.28,
   'feedback/correct.wav': 0.46,
   'feedback/incorrect.wav': 0.40,
   'feedback/heart-lost.wav': 0.28,

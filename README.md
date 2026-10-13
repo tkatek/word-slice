@@ -171,8 +171,10 @@ Notable behaviors:
   key is preserved untouched; nothing is carried over dishonestly.
 - Five real achievements (first pass, first 3★, 5-in-a-row, five levels,
   beginner stage) with toasts and a Settings list.
-- First-time interactive tutorial (skippable): read the question → practice
-  swipe on a real fruit (cut artwork feedback) → leave distractors → play.
+- Interactive tutorial overlay (skippable, real fruit sprites, one practice
+  swipe): built and wired internally, but currently **not reachable from
+  the UI** — the approved flow starts straight into gameplay (see
+  "Intentionally deferred").
 
 ### Gameplay
 
@@ -296,6 +298,13 @@ controls exist.
 `window.wordSliceAudio` exposes the manager (stats/mute/volume) for
 debugging and automated verification.
 
+`window.__wordSlice` exposes a second read-only verification handle
+(`engine`, `intro`, `appState()`, `currentLevel()`, `progress()`,
+`refreshView`, `applyLayout`, `stepIntro`, `renderFrame`,
+`processEngineEvents`). It lets automated tests inspect the live engine
+and drive presentation steps in environments where rAF/timers are
+throttled; the game never mutates it.
+
 ## Intentionally deferred
 
 - Background music (no suitable original track; no fake music controls) and
@@ -307,6 +316,11 @@ debugging and automated verification.
 - B2/C1 level content — the architecture (manifest + stage files + type
   validation) supports adding stages without engine changes, but no large
   unreviewed advanced bank is shipped.
+- The interactive tutorial overlay (markup + logic, `openTutorial()` in
+  `js/game.js`) currently has **no entry point**: the approved flow starts
+  straight into gameplay, and first-time help is served by the How to play
+  overlay from the menu navigation. Wiring it to the first-ever play is a
+  content decision, not a code gap.
 
 ## Draft-content review requirement
 
@@ -318,15 +332,39 @@ by a teacher. It must be reviewed before being used with real learners.
 - The rAF watchdog (see above) exists only for embedded/occluded webviews; on such
   views the game also runs slower because browser timers are throttled.
 - Real-device (phone) behavior — touch latency, safe-area insets, mobile browser
-  toolbar changes — has not been verified on hardware.
+  toolbar changes — has not been verified on hardware. All mobile checks so far
+  are browser-emulated (see **Verification** below).
 - Timed slicing is inherently difficult for some players; no accessibility claim is
   made for the timed mode.
 
-## Remaining manual browser/device checks
+## Verification (2026-10 audit)
 
-- Full 10-round lesson completion on a normal desktop browser at 60 fps.
-- Real touch swipes on a phone (iOS Safari + Android Chrome), including orientation
-  change mid-round.
-- Keyboard-only navigation of menus/overlays (buttons are real buttons with focus
-  states, but a full keyboard pass has not been done).
-- Performance check with final artwork once assets exist.
+Automated: 112 tests / 16 suites pass (`npm test`), covering engine state
+transitions, scoring/hearts, collision geometry, waves, pause/resume,
+intro scheduling, level unlocking, stars, achievements, progress
+persistence, question-data validation and the audio manager.
+
+Browser-emulated (ZCode in-app Chromium, driven via real DOM clicks and
+PointerEvents): zero horizontal overflow at 320/360/375/390/414/430/768/
+1024/1366/1920 px plus phone-landscape sizes, across loading, intro,
+gameplay, feedback, results, level map, menu, settings, how-to and the
+mistake-review overlay; page-scroll only on intentionally scrollable
+screens; pause freezes the countdown and airborne fruits; orientation
+flip mid-round recovers to the same question; a completed 10-round
+perfect session (3★, unlock, Next level), an early-heart-loss session
+and a completed-but-failed session (mistake previews + full review
+overlay) were each driven end-to-end. Measured JS frame cost at
+1920×1080 with a full board: ~0.1 ms average / 0.2 ms p95 per frame
+(60 fps budget = 16.7 ms); DOM effect nodes are bounded and pruned.
+
+Fixed during the audit: the compact question banner hid its
+"Wave N of M" line whenever a long prompt wrapped to 3+ lines (the fit
+measured the wave line after the over-full flex column had already
+crushed it to zero height — now measured by content with a
+no-flex-shrink guard), and Settings → Reset best score previously wiped
+the whole level record (re-locking earned levels); it now calls
+`resetLevelBestScore()`, which clears only the best score.
+
+Not verifiable in this environment and still outstanding: audible audio
+quality on real speakers (covered by unit tests only) and real-device
+touch behavior.

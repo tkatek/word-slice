@@ -117,6 +117,19 @@ export const AUDIO_MANIFEST = Object.freeze({
       'assets/audio/slicing/fruit-cut-3.wav',
     ],
   },
+  fruitThrow: {
+    // Fruits launching from below: a quick rising fwoop, medium-low in the
+    // mix so the blade and the cut always dominate. The 380 ms cooldown
+    // groups one wave's staggered launches (engine SPAWN_STAGGER is 120 ms
+    // with up to 4 fruits ≈ 360 ms span) into a single combined sound,
+    // while separate waves (≥ WAVE_GAP + flight, seconds apart) retrigger.
+    bus: 'gameplay', gain: 0.38, cooldownMs: 380, priority: 4, pitchVar: 0.06,
+    files: [
+      'assets/audio/slicing/fruit-throw-1.wav',
+      'assets/audio/slicing/fruit-throw-2.wav',
+      'assets/audio/slicing/fruit-throw-3.wav',
+    ],
+  },
   correct: {
     bus: 'gameplay', gain: 0.7, cooldownMs: 60, priority: 9, pitchVar: 0.02,
     files: ['assets/audio/feedback/correct.wav'],

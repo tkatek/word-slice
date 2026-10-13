@@ -941,6 +941,7 @@ function beginRoundIntro() {
   els.qcMeta.textContent = `LEVEL ${currentLevel ? currentLevel.order : 1} · ROUND ${hud.questionNumber}/${hud.questionTotal}`;
   els.qcInstruction.textContent = introInstructionFor(hud.prompt);
   els.questionWave.textContent = ''; // no stale wave line during the intro
+  lastWaveText = '';
   lastCompactFitKey = ''; // the next compact landing re-measures the wrap
   document.documentElement.style.setProperty('--qc-extra', '0px');
   els.questionCard.style.height = ''; // intro height comes from the artwork's aspect
@@ -975,7 +976,8 @@ function finishFlight() {
   els.questionCard.style.height = ''; // banner height takes over (same value)
   // Pre-launch wave preview; renderHud keeps it live once fruits fly.
   const waves = engine ? Math.ceil(Object.keys(engine.getOptionOutcomes() || {}).length / engine.maxActiveFruits) : 0;
-  els.questionWave.textContent = waves > 1 ? `Wave 1 of ${waves}` : '';
+  lastWaveText = waves > 1 ? `Wave 1 of ${waves}` : '';
+  els.questionWave.textContent = lastWaveText;
   fitCompactQuestion(true); // grow for wrapped prompts before fruits launch
   // Re-check one paint later: fonts and the flight's retargeted size
   // transitions settle asynchronously, and throttled renderers can serve
@@ -1183,9 +1185,19 @@ function startDeathAnimation(fruitId, entry) {
   dyingFruits.push({ el: entry.root, until: performance.now() + 560 });
 }
 
+/** Explicit decoration ceilings: bursts are pruned by age after 700 ms, but
+    a rapid multi-fruit swipe could otherwise stack dozens of 9-droplet CSS
+    animations at once on low-power devices. The oldest burst is dropped
+    first; float notes get the same treatment. */
+const MAX_JUICE_BURSTS = 12;
+const MAX_FLOAT_NOTES = 24;
+
 function spawnJuiceBurst(x, y, appearanceId, dirX, dirY, size) {
   const files = FRUIT_APPEARANCES[appearanceId];
   if (!files) return;
+  while (juiceBursts.length >= MAX_JUICE_BURSTS) {
+    juiceBursts.shift().el.remove();
+  }
   const burst = document.createElement('div');
   burst.className = 'juice-burst';
   burst.style.left = `${Math.round(x)}px`;
@@ -1210,6 +1222,9 @@ function spawnJuiceBurst(x, y, appearanceId, dirX, dirY, size) {
 }
 
 function addFloatNote(x, y, text, kind) {
+  while (floatNotes.length >= MAX_FLOAT_NOTES) {
+    floatNotes.shift().el.remove();
+  }
   const note = document.createElement('div');
   note.className = `float-note ${kind}`;
   note.textContent = text;
@@ -1316,22 +1331,46 @@ function retriggerAnimation(el, className) {
 let lastScore = -1;
 let lastMultiplier = -1;
 
+/** Cached HUD strings — textContent/attr writes happen only on change, so a
+    60 fps renderHud performs essentially zero DOM writes between events. */
+let lastLevelOrder = 0;
+let lastRoundText = '';
+let lastLessonPercent = -1;
+let lastComboText = '';
+let lastTimerText = '';
+let lastPromptText = '';
+let lastWaveText = '';
+
 function renderHud() {
   if (!engine) return;
   const hud = engine.getHudState();
-  if (currentLevel) els.hudLevelValue.textContent = String(currentLevel.order);
-  els.hudRoundValue.textContent = `${hud.questionNumber}/${hud.questionTotal}`;
+  if (currentLevel && currentLevel.order !== lastLevelOrder) {
+    lastLevelOrder = currentLevel.order;
+    els.hudLevelValue.textContent = String(currentLevel.order);
+  }
+  const roundText = `${hud.questionNumber}/${hud.questionTotal}`;
+  if (roundText !== lastRoundText) {
+    lastRoundText = roundText;
+    els.hudRoundValue.textContent = roundText;
+  }
   const lessonPercent = hud.questionTotal > 0
     ? Math.round((hud.questionNumber / hud.questionTotal) * 100)
     : 0;
-  els.hudProgressFill.style.width = `${lessonPercent}%`;
-  els.hudProgressTrack.setAttribute('aria-valuenow', String(lessonPercent));
+  if (lessonPercent !== lastLessonPercent) {
+    lastLessonPercent = lessonPercent;
+    els.hudProgressFill.style.width = `${lessonPercent}%`;
+    els.hudProgressTrack.setAttribute('aria-valuenow', String(lessonPercent));
+  }
   if (hud.score !== lastScore) {
     els.hudScoreValue.textContent = `${hud.score}`;
     if (lastScore >= 0 && hud.score > lastScore) retriggerAnimation(els.hudScore, 'is-bumped');
     lastScore = hud.score;
   }
-  els.hudComboValue.textContent = hud.streak > 0 ? `${hud.streak} ×${hud.multiplier}` : '—';
+  const comboText = hud.streak > 0 ? `${hud.streak} ×${hud.multiplier}` : '—';
+  if (comboText !== lastComboText) {
+    lastComboText = comboText;
+    els.hudComboValue.textContent = comboText;
+  }
   els.hudCombo.classList.toggle('is-hot', hud.multiplier > 1);
   if (hud.multiplier !== lastMultiplier) {
     if (lastMultiplier >= 0 && hud.multiplier > lastMultiplier) {
@@ -1339,7 +1378,11 @@ function renderHud() {
     }
     lastMultiplier = hud.multiplier;
   }
-  els.hudTimerValue.textContent = formatTime(hud.elapsed);
+  const timerText = formatTime(hud.elapsed);
+  if (timerText !== lastTimerText) {
+    lastTimerText = timerText;
+    els.hudTimerValue.textContent = timerText;
+  }
   const heartsKey = `${hud.hearts}/${hud.maxHearts}`;
   if (heartsKey !== lastHeartsKey) {
     lastHeartsKey = heartsKey;
@@ -1348,8 +1391,15 @@ function renderHud() {
     els.hudHearts.innerHTML = hearts;
     els.hudHearts.setAttribute('aria-label', `Hearts ${hud.hearts} of ${hud.maxHearts}`);
   }
-  els.questionPrompt.textContent = hud.prompt;
-  els.questionWave.textContent = hud.wave ? `Wave ${hud.wave.current} of ${hud.wave.total}` : '';
+  if (hud.prompt !== lastPromptText) {
+    lastPromptText = hud.prompt;
+    els.questionPrompt.textContent = hud.prompt;
+  }
+  const waveText = hud.wave ? `Wave ${hud.wave.current} of ${hud.wave.total}` : '';
+  if (waveText !== lastWaveText) {
+    lastWaveText = waveText;
+    els.questionWave.textContent = waveText;
+  }
   fitCompactQuestion(); // re-fit only when the banner text actually changes
 }
 
@@ -1876,7 +1926,11 @@ function onPointerMove(event) {
         audioManager.play('bladeWhoosh');
       }
       engine.slice(lastPoint.x, lastPoint.y, point.x, point.y);
-      processEngineEvents();
+      // Slice results (cut sound, float notes, death animations) are applied
+      // by the next animation tick's processEngineEvents() — at most one
+      // frame later, imperceptible next to the next paint. Deferring keeps
+      // DOM writes inside the render frame instead of interleaving them
+      // with this input handler's layout reads.
     }
   }
   pushTrailPoint(point.x, point.y);
@@ -1984,6 +2038,7 @@ function startGame(level) {
   }
   cleanupGameDom();
   cancelIntro(); // any stale countdown/flight must never launch this session
+  audioManager.cancelSequences(); // stale celebration items must not fire over the new session
   audioManager.setSuspended(false); // a fresh session always starts audible
   setScreen('game'); // the playfield must be visible to be measurable
   currentLevel = level;
@@ -1991,6 +2046,12 @@ function startGame(level) {
   lastHeartsKey = ''; // force the HUD hearts to redraw for the new session
   lastScore = -1; // no pop/flare when the fresh values first render
   lastMultiplier = -1;
+  lastRoundText = '';
+  lastLessonPercent = -1;
+  lastComboText = '';
+  lastTimerText = '';
+  lastPromptText = '';
+  lastWaveText = '';
   engine = new WordSliceEngine({
     seed: ((Math.random() * 0xffffffff) >>> 0) || 1,
     maxActiveFruits: computeMaxActiveFruits(),
@@ -2011,6 +2072,7 @@ function quitToLevels() {
   currentLevel = null;
   stopLoop();
   cleanupGameDom();
+  audioManager.cancelSequences(); // pending celebration items belong to the abandoned session
   audioManager.setSuspended(false);
   openLevelsScreen();
 }

@@ -576,6 +576,7 @@ export function createAudioManager(deps = {}) {
   return {
     play,
     playSequence,
+    cancelSequences,
     unlock,
     warmup,
     setSuspended,

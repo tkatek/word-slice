@@ -1257,7 +1257,10 @@ html, body {
 /* Mobile portrait: compact HUD, bigger pause, slimmer banner. */
 @media (max-width: 640px) {
   .game-screen { gap: 6px; padding: 6px 0 4px; }
-  .hud { gap: 6px; }
+  /* The right HUD cluster alone is ~230px wide: on phones the progress
+     bar wraps to its own full-width row so nothing spills past the edge. */
+  .hud { flex-wrap: wrap; gap: 6px; }
+  .hud-progress { order: 3; flex-basis: 100%; }
   .hud-chip { font-size: 0.74rem; padding: 5px 9px; gap: 4px; border-width: 1.5px; }
   .btn-round { width: 40px; height: 40px; font-size: 0.8rem; }
   .hud-progress { padding: 5px 10px; gap: 2px; }

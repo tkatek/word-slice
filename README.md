@@ -149,29 +149,47 @@ Notable behaviors:
 - Pause overlay (blurred/desaturated backdrop), tab-hidden auto-pause, safe resume.
 - Early game over, mistake review grouped by question, percentages as "—" when the
   denominator is zero.
-- Fruit answer items drawn in CSS (watermelon, pineapple, apple, orange, strawberry,
-  blueberry — stripes, crown, stem/leaf, seeds, star calyx, gloss and shadows), assigned
-  independently of correctness; labels stay upright and readable on the fruit. An
-  appearance mapping (`FRUIT_APPEARANCES` in `js/game.js`) with whole/left/right image
-  paths can later replace the CSS art; missing images fall back automatically.
-- Scenic responsive play-screen backgrounds: `assets/backgrounds/desktop.png`
-  (landscape) and `assets/backgrounds/phone.png` (portrait, picked by orientation or
-  ≤ 700 px width), with a soft vignette so labels stay readable.
-- Game-style HUD: rounded glossy chips (score, streak, hearts, timer), round progress
-  bar, round pause button, wooden/parchment question card with helper line, desktop
-  side panels (Score / Combo / Best), and a bottom action bar with a working Help
-  overlay. The "Power-ups soon" chip is clearly decorative, not a fake control.
+- Fruit answer items are PNG sprites (10 fruits: watermelon, pineapple, apple, orange,
+  strawberry, blueberry, banana, pear, lemon, kiwi) with whole art in
+  `assets/fruits/sprites/uncuted/` and cut art in `assets/fruits/sprites/cuted/`,
+  assigned independently of correctness. Sprites are body-trimmed (the image box
+  equals the fruit silhouette) and scaled from the engine's collision radius with a
+  small per-fruit oversize; labels stay upright via counter-rotation while the fruit
+  spins and auto-shrink for long words. A CSS placeholder ball shows until a sprite
+  finishes loading; a missing cut sprite falls back to a fade-out.
+- Slicing FX: the whole sprite is replaced by two clipped copies of the cut artwork
+  that fly apart along the swipe direction, plus a per-fruit-colored juice burst
+  (9 droplets biased along the blade) and a points popup. Blade trail with glow.
+- Scenic responsive backgrounds: `assets/backgrounds/desktop.png` (landscape) and
+  `assets/backgrounds/phone.png` (portrait, picked by orientation or ≤ 700 px width),
+  with a soft vignette so labels stay readable.
+- Wooden signboard logo ("Word" gold / "Slice" blue, ropes and leaves) on the menu,
+  loading, error, and game screens. Game HUD: logo top-left, navy round-progress bar
+  with green fill and lesson subtitle top-center, points/timer/hearts chips and a
+  circular pause button top-right, wooden Score/Combo/Best panels on the desktop
+  left edge, a hanging parchment question banner (ropes + leaves + helper line), and
+  a bottom power-up bar with four circular buttons (Slow time / Auto slice / Shield
+  are visibly locked and only show a "coming soon" toast; Settings is real).
+- First page: nav header (Home / How to Play / Settings), hero card with headline,
+  copy, glossy Play now / How to play buttons, real stored best score, and a 3-step
+  how-to (read the challenge → slice the correct fruits → avoid wrong answers) using
+  the actual fruit sprites with an animated swipe demo.
+- App-level overlays (How to play, Settings with working best-score reset) pause live
+  gameplay and suppress the in-playfield pause panel while open. Results screen
+  shows 0–3 stars earned on merit only (finish / pass / flawless pass).
 - The HUD timer shows the session's elapsed play time (engine simulation seconds —
   it only advances while the round is actually running).
+- `tools/prep-fruits.mjs` regenerates the sprite set from the raw generated PNGs
+  (trims transparent margins, clamps near-opaque alpha, downsamples to ≤ 480 px).
 
 ## Intentionally deferred
 
-- Final sound effects and dedicated fruit/background artwork (the current scenery and
-  CSS fruits are generated/placeholder assets pending art review).
-- Working power-ups, coins, and the bottom-bar slots beyond Help (shown as a clearly
-  labeled "soon" chip only).
+- Sound effects (the Settings toggle is visibly disabled and labeled as such) and any
+  further art polish of the generated backgrounds/sprites.
+- Working power-ups (Slow time / Auto slice / Shield are locked "coming soon" buttons),
+  coins, and any meta-game systems.
 - An untimed practice mode and broader accessibility work for timed slicing.
-- Additional lessons/CEFR levels, lesson unlocking, and any meta-game systems.
+- Additional lessons/CEFR levels and lesson unlocking.
 
 ## Draft-content review requirement
 

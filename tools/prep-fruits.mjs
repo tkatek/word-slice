@@ -7,29 +7,29 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const SRC = 'C:\\Users\\HP\\Downloads';
-const OUT = path.resolve('assets/fruits');
+const OUT = path.resolve('assets/fruits/sprites');
 
 const FILES = {
-  'watermelon.png': 'Image ChatGPT 12 oct. 2026, 20_41_54-1.png',
-  'pineapple.png': 'Image ChatGPT 12 oct. 2026, 20_41_55-2.png',
-  'orange.png': 'Image ChatGPT 12 oct. 2026, 20_41_56-3.png',
-  'apple.png': 'Image ChatGPT 12 oct. 2026, 20_41_58-4.png',
-  'strawberry.png': 'Image ChatGPT 12 oct. 2026, 20_41_59-5.png',
-  'blueberry.png': 'Image ChatGPT 12 oct. 2026, 20_42_00-6.png',
-  'banana.png': 'Image ChatGPT 12 oct. 2026, 20_42_01-7.png',
-  'pear.png': 'Image ChatGPT 12 oct. 2026, 20_42_01-8.png',
-  'lemon.png': 'Image ChatGPT 12 oct. 2026, 20_42_02-9.png',
-  'kiwi.png': 'Image ChatGPT 12 oct. 2026, 20_42_03-10.png',
-  'watermelon-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_29-4.png',
-  'pineapple-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_28-3.png',
-  'orange-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_25-1.png',
-  'apple-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_26-2.png',
-  'strawberry-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_32-5.png',
-  'blueberry-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_33-6.png',
-  'banana-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_34-7.png',
-  'pear-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_35-8.png',
-  'lemon-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_36-9.png',
-  'kiwi-cut.png': 'Image ChatGPT 12 oct. 2026, 20_45_37-10.png',
+  'uncuted/watermelon.png': 'Image ChatGPT 12 oct. 2026, 20_41_54-1.png',
+  'uncuted/pineapple.png': 'Image ChatGPT 12 oct. 2026, 20_41_55-2.png',
+  'uncuted/apple.png': 'Image ChatGPT 12 oct. 2026, 20_41_58-4.png',
+  'uncuted/orange.png': 'Image ChatGPT 12 oct. 2026, 20_41_56-3.png',
+  'uncuted/strawberry.png': 'Image ChatGPT 12 oct. 2026, 20_41_59-5.png',
+  'uncuted/blueberry.png': 'Image ChatGPT 12 oct. 2026, 20_42_00-6.png',
+  'uncuted/banana.png': 'Image ChatGPT 12 oct. 2026, 20_42_01-7.png',
+  'uncuted/pear.png': 'Image ChatGPT 12 oct. 2026, 20_42_01-8.png',
+  'uncuted/lemon.png': 'Image ChatGPT 12 oct. 2026, 20_42_02-9.png',
+  'uncuted/kiwi.png': 'Image ChatGPT 12 oct. 2026, 20_42_03-10.png',
+  'cuted/watermelon.png': 'Image ChatGPT 12 oct. 2026, 20_45_29-4.png',
+  'cuted/pineapple.png': 'Image ChatGPT 12 oct. 2026, 20_45_28-3.png',
+  'cuted/apple.png': 'Image ChatGPT 12 oct. 2026, 20_45_26-2.png',
+  'cuted/orange.png': 'Image ChatGPT 12 oct. 2026, 20_45_25-1.png',
+  'cuted/strawberry.png': 'Image ChatGPT 12 oct. 2026, 20_45_32-5.png',
+  'cuted/blueberry.png': 'Image ChatGPT 12 oct. 2026, 20_45_33-6.png',
+  'cuted/banana.png': 'Image ChatGPT 12 oct. 2026, 20_45_34-7.png',
+  'cuted/pear.png': 'Image ChatGPT 12 oct. 2026, 20_45_35-8.png',
+  'cuted/lemon.png': 'Image ChatGPT 12 oct. 2026, 20_45_36-9.png',
+  'cuted/kiwi.png': 'Image ChatGPT 12 oct. 2026, 20_45_37-10.png',
 };
 
 const CRC_TABLE = (() => {

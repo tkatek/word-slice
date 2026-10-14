@@ -673,6 +673,7 @@ describe('audio startup lifecycle', () => {
       createContext: () => ctx,
     }));
     manager.warmup();
+    await settle(1); // fetches resolved → decodes requested, still pending
     assert.equal(manager.unlock(), true); // sync flip; decodes still pending
     // The very first cut of the unlocking gesture races the decode…
     assert.equal(manager.play('fruitCut'), false);
@@ -691,6 +692,7 @@ describe('audio startup lifecycle', () => {
       createContext: () => ctx,
     }));
     manager.warmup();
+    await settle(1); // decodes requested, still pending
     assert.equal(manager.unlock(), true);
     assert.equal(manager.play('fruitCut'), false);
     clock.advance(HANDOFF_WINDOW_MS + 80); // activation window closed
@@ -720,6 +722,7 @@ describe('audio startup lifecycle', () => {
       createContext: () => ctx,
     }));
     manager.warmup();
+    await settle(1); // decodes requested, still pending
     manager.unlock();
     assert.equal(manager.play('fruitCut'), false);
     manager.cancelSequences(); // what startGame/quitToLevels call on restart
@@ -737,6 +740,7 @@ describe('audio startup lifecycle', () => {
       createContext: () => ctx,
     }));
     manager.warmup();
+    await settle(1); // decodes requested, still pending
     manager.unlock();
     assert.equal(manager.play('fruitCut'), false);
     clock.advance(50);

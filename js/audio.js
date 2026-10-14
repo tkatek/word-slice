@@ -254,6 +254,7 @@ export const ESSENTIAL_EVENTS = Object.freeze([
   'fruitThrow',
   'correct',
   'incorrect',
+  'roundIntro',
   'countdownTick',
   'roundStart',
   'buttonClick',

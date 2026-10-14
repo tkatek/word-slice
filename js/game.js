@@ -1400,40 +1400,108 @@ function clearCutPieces() {
   cutPieces = [];
 }
 
-/** Explicit decoration ceilings: bursts are pruned by age after 700 ms, but
-    a rapid multi-fruit swipe could otherwise stack dozens of 9-droplet CSS
-    animations at once on low-power devices. The oldest burst is dropped
-    first; float notes get the same treatment. */
-const MAX_JUICE_BURSTS = 12;
+/** Decoration ceiling: float notes are pruned by age after ~1 s, but a
+    rapid multi-fruit swipe could otherwise stack dozens of them at once
+    on low-power devices. The oldest note is dropped first. (Juice bursts
+    live on the #fx canvas with their own hard caps — see js/juice.js.) */
 const MAX_FLOAT_NOTES = 24;
 
-function spawnJuiceBurst(x, y, appearanceId, dirX, dirY, size) {
+/* ------------------------------------------------------------------ */
+/* Juice FX — organic splash + droplets on the #fx canvas.              */
+/*                                                                     */
+/* One JuiceFx instance owns every live burst (capped groups, capped    */
+/* droplets, mobile budget). It is stepped and painted from the single  */
+/* rAF loop via renderJuiceFx(): while the engine is paused the juice   */
+/* freezes with the rest of the scene, and expired effects are dropped  */
+/* inside step(). No DOM nodes, no timers, no blur filters.             */
+/* ------------------------------------------------------------------ */
+
+/** The juice system; created lazily so the mobile budget can read the
+ *  actual pointer type at first slice instead of at script load. */
+let juiceFx = null;
+/** #fx canvas 2D context, fetched once on first use. */
+let fxCtx = null;
+/** True while the canvas may hold pixels — skips redundant clears. */
+let fxCanvasDirty = false;
+
+function fxContext() {
+  if (fxCtx === null && els.fxCanvas && els.fxCanvas.getContext) {
+    fxCtx = els.fxCanvas.getContext('2d');
+  }
+  return fxCtx;
+}
+
+/** Sizes the juice canvas to the playfield. DPR-aware and capped at 2×
+ *  (same policy as the trail canvas). A fresh backing store is
+ *  transparent, so this also wipes any stale juice. */
+function fitFxCanvas(w, h) {
+  const canvas = els.fxCanvas;
+  if (!canvas) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(w * dpr));
+  canvas.height = Math.max(1, Math.round(h * dpr));
+  const ctx = fxContext();
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fxCanvasDirty = false;
+}
+
+function clearFxCanvas() {
+  const ctx = fxContext();
+  if (!ctx || !fxCanvasDirty) return;
+  ctx.clearRect(0, 0, els.fxCanvas.width, els.fxCanvas.height);
+  fxCanvasDirty = false;
+}
+
+/** Juice burst for one confirmed slice: the fruit's own juice color, the
+ *  swipe direction/speed, and a playfield-scaled droplet gravity so the
+ *  arc matches the falling cut halves. */
+function spawnJuiceBurst(x, y, appearanceId, dirX, dirY, size, speedPxMs) {
   const files = FRUIT_ASSETS[appearanceId];
-  if (!files) return;
-  while (juiceBursts.length >= MAX_JUICE_BURSTS) {
-    juiceBursts.shift().el.remove();
+  if (!files || prefersReducedMotion) return;
+  if (!juiceFx) {
+    const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    juiceFx = new JuiceFx({ mobile: coarsePointer || window.innerWidth < 640 });
   }
-  const burst = document.createElement('div');
-  burst.className = 'juice-burst';
-  burst.style.left = `${Math.round(x)}px`;
-  burst.style.top = `${Math.round(y)}px`;
-  burst.style.setProperty('--jc', files.juice);
-  const count = 9;
-  const reach = Math.max(30, size * 0.55);
-  for (let i = 0; i < count; i++) {
-    const droplet = document.createElement('i');
-    // Evenly around the circle, biased along the swipe direction.
-    const angle = (i / count) * Math.PI * 2 + (dirX >= 0 ? 0 : Math.PI / count);
-    const bias = 0.45; // fraction of reach added along the swipe
-    const jx = Math.cos(angle) * reach + dirX * reach * bias;
-    const jy = Math.sin(angle) * reach * 0.7 + dirY * reach * bias;
-    droplet.style.setProperty('--jx', `${Math.round(jx)}px`);
-    droplet.style.setProperty('--jy', `${Math.round(jy)}px`);
-    droplet.style.setProperty('--ds', `${Math.round(6 + Math.random() * size * 0.06)}px`);
-    burst.append(droplet);
+  juiceFx.spawn(x, y, {
+    size,
+    juice: files.juice,
+    dirX,
+    dirY,
+    speedPxMs,
+    gravity: engine && engine.playfield.h > 0
+      ? Math.max(420, engine.playfield.h * 0.75)
+      : 700,
+  });
+}
+
+/**
+ * Steps (only while the engine is PLAYING — pausing freezes the juice
+ * with the cut halves) and repaints the live bursts. With nothing live
+ * the canvas is cleared once and the frame costs nothing.
+ */
+function renderJuiceFx(dtSeconds) {
+  if (!juiceFx || juiceFx.count === 0) {
+    clearFxCanvas();
+    return;
   }
-  els.fruitsLayer.append(burst);
-  juiceBursts.push({ el: burst, until: performance.now() + 700 });
+  if (engine && engine.state === ENGINE_STATES.PLAYING) {
+    juiceFx.step(dtSeconds); // clamps stalled-frame deltas internally
+  }
+  const ctx = fxContext();
+  if (!ctx) return;
+  if (juiceFx.count === 0) {
+    clearFxCanvas();
+    return;
+  }
+  clearFxCanvas();
+  juiceFx.draw(ctx);
+  fxCanvasDirty = true;
+}
+
+/** Removes every live juice burst (screen switch, restart, level change). */
+function clearJuiceFx() {
+  if (juiceFx) juiceFx.clear();
+  clearFxCanvas();
 }
 
 function addFloatNote(x, y, text, kind) {

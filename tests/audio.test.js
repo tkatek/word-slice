@@ -361,7 +361,7 @@ describe('audio manager', () => {
     assert.equal(manager.play('bladeWhoosh'), true);
     clock.advance(10);
     assert.equal(manager.play('bladeWhoosh'), false, 'inside cooldown');
-    clock.advance(200); // past the 160 ms whoosh cooldown
+    clock.advance(200); // far past the 50 ms anti-spam whoosh cooldown
     assert.equal(manager.play('bladeWhoosh'), true);
     const stats = manager.getStats();
     assert.equal(stats.skippedCooldown, 1);
@@ -899,5 +899,178 @@ describe('gameplay audio wiring', () => {
     assert.ok(gameSource.includes("window.addEventListener('keydown', tryUnlockFromGesture"));
     // Captured on window so audio resumes before the swipe reaches the field.
     assert.ok(gameSource.includes("{ capture: true, passive: true }"));
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Repeated blade swipes (the plays-only-once fix)                     */
+/* ------------------------------------------------------------------ */
+
+describe('repeated blade swipes', () => {
+  const gameSource = readFileSync(join(ROOT, 'js/game.js'), 'utf8');
+
+  test('every rapid independent gesture stays audible (root-cause regression)', async () => {
+    const { manager, clock } = await readyManager();
+    // A fast human flurry: a fresh gesture every ~120 ms (down+swipe+up).
+    // Under the old 160 ms cooldown every other gesture went silent and
+    // the latched one-shot flag never retried it; every one must play now.
+    let audible = 0;
+    for (let i = 0; i < 10; i++) {
+      clock.advance(120);
+      if (manager.play('bladeWhoosh')) audible++;
+    }
+    assert.equal(audible, 10, 'all ten rapid gestures swish');
+    assert.equal(manager.getStats().byEvent.bladeWhoosh, 10);
+  });
+
+  test('a new gesture is never suppressed by a leftover cooldown from the previous one', async () => {
+    const { manager, clock } = await readyManager();
+    assert.equal(manager.play('bladeWhoosh'), true, 'gesture 1');
+    clock.advance(60); // just past the anti-spam window, far under human speed
+    assert.equal(manager.play('bladeWhoosh'), true, 'gesture 2 immediately after');
+  });
+
+  test('a long moving gesture retriggers swishes under the pacing gates', async () => {
+    const { manager, clock } = await readyManager();
+    // In-gesture pacing from game.js (≥130 ms AND ≥50 px travel): swishes
+    // at ~140 ms spacing must all be eligible.
+    for (let i = 0; i < 5; i++) {
+      clock.advance(140);
+      assert.equal(manager.play('bladeWhoosh'), true, `swish ${i + 1} of the drag`);
+    }
+    assert.equal(manager.getStats().byEvent.bladeWhoosh, 5);
+  });
+
+  test('synthetic duplicate bursts are still rate-limited by the anti-spam window', async () => {
+    const { manager, clock } = await readyManager();
+    assert.equal(manager.play('bladeWhoosh'), true);
+    assert.equal(manager.play('bladeWhoosh'), false, 'same-tick duplicate blocked');
+    clock.advance(20);
+    assert.equal(manager.play('bladeWhoosh'), false, 'sub-window duplicate blocked');
+    clock.advance(60); // past the 50 ms guard
+    assert.equal(manager.play('bladeWhoosh'), true);
+  });
+
+  test('the blade swish never suppresses the fruit cut', async () => {
+    const { manager } = await readyManager();
+    assert.equal(manager.play('bladeWhoosh'), true, 'the swish of the slicing gesture');
+    assert.equal(manager.play('fruitCut'), true, 'the confirmed collision still cuts audibly');
+    const cut = AUDIO_MANIFEST.fruitCut;
+    const whoosh = AUDIO_MANIFEST.bladeWhoosh;
+    assert.ok(cut.gain > whoosh.gain, 'the cut is the more prominent sound');
+    assert.ok(cut.priority > whoosh.priority, 'the cut survives voice-cap contention');
+  });
+
+  test('pause blocks swipes and resume restores repeated playback', async () => {
+    const { manager, clock } = await readyManager();
+    manager.setSuspended(true);
+    assert.equal(manager.play('bladeWhoosh'), false, 'paused gameplay bus is silent');
+    manager.setSuspended(false);
+    for (let i = 0; i < 3; i++) {
+      clock.advance(120);
+      assert.equal(manager.play('bladeWhoosh'), true, `post-resume gesture ${i + 1}`);
+    }
+  });
+
+  test('muting silences every blade swish immediately', async () => {
+    const { manager, ctx, clock } = await readyManager();
+    const sourcesBefore = ctx.sources.length;
+    manager.setMuted(true);
+    clock.advance(200);
+    assert.equal(manager.play('bladeWhoosh'), false, 'muted swish is a no-op');
+    assert.equal(ctx.sources.length, sourcesBefore, 'no playback node created');
+    manager.setMuted(false);
+    clock.advance(200);
+    assert.equal(manager.play('bladeWhoosh'), true, 'unmuting restores swishes');
+  });
+
+  test('variation never repeats the same sample back-to-back', async () => {
+    const clock = fakeClock();
+    const ctx = fakeAudioContext();
+    // Distinct decoded buffers per file so the chosen variation is observable.
+    let decodeSeq = 0;
+    ctx.decodeAudioData = () => Promise.resolve({ id: ++decodeSeq, duration: 0.25 });
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+      rng: () => 0.99, // always picks the same index first — forces the collision path
+    }));
+    manager.unlock();
+    await settle();
+    clock.advance(200);
+    manager.play('bladeWhoosh');
+    clock.advance(200);
+    manager.play('bladeWhoosh');
+    clock.advance(200);
+    manager.play('bladeWhoosh');
+    const buffers = ctx.sources.map((s) => s.buffer);
+    assert.equal(buffers.length, 3);
+    assert.notEqual(buffers[0], buffers[1], 'second swish uses a different variation');
+    assert.notEqual(buffers[1], buffers[2], 'third swish differs from the second');
+    assert.ok(buffers[0] === buffers[2] || buffers[0] !== buffers[2], 'rotation is free, only immediate repeats are banned');
+  });
+
+  test('whoosh retrigger nodes are cleaned up after ending', async () => {
+    const { manager, ctx, clock } = await readyManager();
+    for (let i = 0; i < 4; i++) {
+      clock.advance(150);
+      manager.play('bladeWhoosh');
+    }
+    assert.equal(ctx.sources.length, 4, 'one fresh source per swish (no node reuse)');
+    for (const src of ctx.sources) {
+      assert.equal(typeof src.onended, 'function', 'cleanup is scheduled on ended');
+      src.stop(); // simulate natural end-of-buffer
+    }
+    assert.equal(manager.getStats().activeVoices, 0, 'all voices released');
+  });
+
+  test('the blade manifest keeps at least three distinct variations', () => {
+    const def = AUDIO_MANIFEST.bladeWhoosh;
+    assert.ok(def.files.length >= 3, 'variation pool size');
+    assert.equal(new Set(def.files).size, def.files.length, 'no duplicate files in the pool');
+    assert.ok(def.cooldownMs <= 60, 'cooldown stays a short anti-spam guard');
+    assert.ok(def.cooldownMs >= 20, '…but still blocks same-tick duplicate events');
+  });
+
+  /* ---- gesture wiring in js/game.js (source contracts) ---- */
+
+  test('the first swish of a gesture is immediate and movement-gated', () => {
+    const move = gameSource.match(/function onPointerMove\(event\) \{[\s\S]{0,1400}/);
+    assert.ok(move, 'onPointerMove exists');
+    assert.ok(move[0].includes('distance >= MIN_SWIPE_DISTANCE && canSlice()'), 'slicing branch is movement-gated');
+    assert.ok(move[0].includes('maybePlayWhoosh(distance)'), 'swish triggers inside the movement branch only');
+    const idxWhoosh = move[0].indexOf('maybePlayWhoosh(distance)');
+    const idxSlice = move[0].indexOf('engine.slice(');
+    assert.ok(idxWhoosh > -1 && idxSlice > -1 && idxWhoosh < idxSlice, 'the swish plays even when nothing is cut (before the slice call)');
+  });
+
+  test('long drags retrace swishes only after real travel AND a spacing interval', () => {
+    const distanceGate = gameSource.match(/WHOOSH_RETRIGGER_DISTANCE = (\d+)/);
+    const timeGate = gameSource.match(/WHOOSH_RETRIGGER_MS = (\d+)/);
+    assert.ok(distanceGate, 'distance gate constant exists');
+    assert.ok(timeGate, 'time gate constant exists');
+    const px = Number(distanceGate[1]);
+    const ms = Number(timeGate[1]);
+    assert.ok(px >= 35 && px <= 60, `travel gate in the 35–60 px band (got ${px})`);
+    assert.ok(ms >= 90 && ms <= 150, `spacing gate in the 90–150 ms band (got ${ms})`);
+    const pacing = gameSource.match(/function maybePlayWhoosh[\s\S]{0,900}/);
+    assert.ok(pacing, 'maybePlayWhoosh exists');
+    assert.ok(pacing[0].includes('travel >= WHOOSH_RETRIGGER_DISTANCE'), 'travel accumulates between swishes');
+    assert.ok(pacing[0].includes('t - gestureWhoosh.at >= WHOOSH_RETRIGGER_MS'), 'spacing is enforced between swishes');
+    // Stationary pointers: the swish lives inside the movement branch, so a
+    // still-held pointer fires no move events that ever satisfy the branch.
+    assert.ok(!pacing[0].includes('setInterval'), 'no timers — no sound while held still');
+  });
+
+  test('pointerdown and gesture teardown reset per-gesture swish state', () => {
+    const down = gameSource.match(/function onPointerDown\(event\) \{[\s\S]{0,700}/);
+    assert.ok(down[0].includes('gestureWhoosh = null'), 'each new gesture starts eligible for an immediate swish');
+    const clear = gameSource.match(/function clearGesture\(\) \{[\s\S]{0,300}/);
+    assert.ok(clear[0].includes('gestureWhoosh = null'), 'pointerup/pointercancel fully reset the swish state');
+    const end = gameSource.match(/function onPointerEnd\(event\) \{[\s\S]{0,300}/);
+    assert.ok(end[0].includes('clearGesture()'), 'pointercancel shares the reset path');
+    // The single-pointer guard keeps a second simultaneous finger silent.
+    const down2 = gameSource.match(/if \(!canSlice\(\) \|\| activePointerId !== null\) return;/);
+    assert.ok(down2, 'only one active pointer can drive swishes (no touch stacking)');
   });
 });

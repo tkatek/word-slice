@@ -81,11 +81,11 @@ export const TUNING = Object.freeze({
   MAX_DRIFT_RATIO: 0.05,        // |vx| ≤ lane width × this per second
   SPIN_DEG_PER_S: 80,           // max |angular velocity|
 
-  // Answer-fruit pool: only body shapes wide enough to carry a readable
-  // word label. Narrow/elongated sprites (banana, pear, pineapple, lemon)
-  // are excluded from gameplay but remain available as decoration art.
+  // Answer-fruit pool: the 10 body shapes of the current sprite pack
+  // (assets/fruits/ — whole + left/right cut halves per fruit). All ten
+  // bodies are round and wide enough to carry a readable word label.
   // Assignment is sequential per fruit id, independent of correctness.
-  APPEARANCES: ['watermelon', 'apple', 'orange', 'blueberry', 'strawberry', 'kiwi'],
+  APPEARANCES: ['watermelon', 'apple', 'orange', 'tomato', 'peach', 'melon', 'pomegranate', 'lemon', 'plum', 'coconut'],
 
   MAX_EVENTS: 64,               // bounded event queue
 });

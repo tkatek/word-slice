@@ -1121,30 +1121,29 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
-.fruits-layer, .trail {
+.fruits-layer, .trail, .fx {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-.trail { overflow: visible; z-index: 4; }
-/* Dual-line blade trail: a wide translucent stroke gives the soft outer
-   glow while the core line carries the bright center — cheaper than an
-   SVG blur filter, which matters on mobile. */
-#trail-glow {
-  fill: none;
-  stroke: rgba(150, 215, 255, 0.28);
-  stroke-width: 16;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.trail {
+  display: block;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
 }
-#trail-line {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.95);
-  stroke-width: 7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+/* Juice splash + droplets are rendered entirely in canvas — see
+   js/juice.js. The layer floats above the separating fruit halves
+   (z 3) and below the blade trail (z 4). */
+.fx {
+  display: block;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
 }
+/* The blade slash (sharp tip, tapered tail, layered cyan/white glow) is
+   rendered entirely in canvas — see renderTrail() in js/game.js. Drawing
+   the glow as extra polygon fills keeps mobile free of blur filters. */
 
 /* ---------------------------------------------------------------- */
 /* Fruit items: PNG sprite + upright outlined label                  */
@@ -1179,8 +1178,10 @@ body {
 
 .fruit-label {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  /* --lx/--ly anchor the word to each fruit's visible body (stems and
+     leaves push the anchor down); calibrated per fruit in FRUIT_ASSETS. */
+  left: var(--lx, 50%);
+  top: var(--ly, 52%);
   /* Counter-rotate so the word stays upright while the fruit spins. */
   transform: translate(-50%, -50%) rotate(calc(-1 * var(--rot, 0deg)));
   font-weight: 900;
@@ -1198,8 +1199,12 @@ body {
   pointer-events: none;
 }
 
-/* Slicing FX: whole sprite is replaced by two clipped copies of the
-   cut artwork which fly apart; juice bursts from the swipe line. */
+/* Slicing FX: the whole sprite vanishes and TWO real cut-half sprites
+   (left + right artwork) take over as independent DOM pieces. Their
+   motion — inherited velocity, separation impulse, spin, gravity, fade —
+   is integrated by stepCutPieces() in the single rAF loop; this sheet
+   only styles them. The juice splash and droplets are painted per frame
+   into the #fx canvas by js/juice.js (spawnJuiceBurst in js/game.js). */
 .fruit.dying { pointer-events: none; }
 .fruit.dying-hit .fruit-img,
 .fruit.dying-hit .fruit-fallback,
@@ -1211,57 +1216,23 @@ body {
   animation: slice-fade 0.45s ease forwards;
 }
 @keyframes slice-fade { to { opacity: 0; } }
-.fruit.dying-hit .fruit-half-img {
+
+/* One cut half. Same canvas box as the whole fruit (the half artwork is
+   registered on the same 256px grid), positioned/rotated per frame. */
+.fruit-piece {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0;
   object-fit: contain;
+  pointer-events: none; /* never blocks slicing input */
+  will-change: transform;
+  user-select: none;
   -webkit-user-drag: none;
-  animation: half-fly 0.5s cubic-bezier(0.2, 0.6, 0.5, 1) forwards;
-}
-.fruit.dying-hit .fruit-half-img.half-left {
-  clip-path: inset(0 50% 0 0);
-  --hx: calc(-1 * var(--dx, 40px));
-  --hr: calc(-1 * var(--hrdeg, 60deg));
-}
-.fruit.dying-hit .fruit-half-img.half-right {
-  clip-path: inset(0 0 0 50%);
-  --hx: var(--dx, 40px);
-  --hr: var(--hrdeg, 60deg);
-}
-@keyframes half-fly {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-  30% { transform: translate(calc(var(--hx) * 0.35), calc(var(--dy, 26px) * -0.3)) rotate(calc(var(--hr) * 0.3)); opacity: 1; }
-  100% { transform: translate(var(--hx), calc(var(--dy, 26px) + 130px)) rotate(var(--hr)); opacity: 0; }
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.32));
 }
 .fruit.dying-miss .fruit-img,
 .fruit.dying-miss .fruit-label { animation: miss-fade 0.32s ease forwards; }
 @keyframes miss-fade { to { opacity: 0; transform: translateY(30px); } }
-
-.juice-burst {
-  position: absolute;
-  width: 0;
-  height: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.juice-burst i {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: var(--ds, 10px);
-  height: var(--ds, 10px);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), var(--jc, #e33) 60%);
-  box-shadow: 0 0 6px var(--jc, #e33);
-  animation: droplet 0.6s ease-out forwards;
-}
-@keyframes droplet {
-  from { transform: translate(0, 0) scale(1); opacity: 1; }
-  to { transform: translate(var(--jx, 0px), var(--jy, 0px)) scale(0.25); opacity: 0; }
-}
 
 /* Floating feedback notes */
 .float-note {
@@ -1392,7 +1363,13 @@ body {
 .play-orb-icon {
   width: 46%;
   height: 46%;
-  margin-left: 7%; /* optical centering of the triangle */
+  /* The triangle path's own bbox sits off the viewBox center (its box runs
+     8.6→20.7 of 24 horizontally and 3.9→18.3 vertically), which — stacked
+     with the old margin-left — pushed the glyph visibly right of the orb's
+     center. translate() % is relative to this square icon box, so these
+     values move it back by exactly 2.65/24 left and 0.9/24 down, making
+     the glyph geometrically centered in the circle. */
+  transform: translate(-11.04%, 3.75%);
   fill: currentColor; /* white triangle on the glossy blue face */
   filter: drop-shadow(0 2px 3px rgba(2, 40, 72, 0.65));
 }
@@ -2770,6 +2747,23 @@ body {
   .hud-chip { padding: 4px 9px; font-size: 0.8rem; }
   .hud-round { font-size: 0.86rem; }
   .hud-leaf { display: none; }
+
+  /* The centered intro card is scaled up to 1.3x by the JS for readability,
+     but that scale is capped by the viewport WIDTH alone — on short landscape
+     phones the 560px card grew to ~730x410 and ran past the bottom of the
+     screen, cutting off the countdown pill and progress track. Two guards:
+     the playfield flexes to the real viewport bottom (its desktop
+     min-height forced it — and the card's centering point — off-screen),
+     and the intro card's width is capped so the scaled height fits below
+     the HUD/banner chrome. A narrower card simply wraps the prompt onto
+     extra lines instead of escaping the box. 1.367 = artwork aspect
+     1672/941 divided by the 1.3 scale; the 230px floor keeps very short
+     screens from collapsing the card to an unreadable sliver. */
+  .game-screen .playfield { min-height: 0; }
+  .question-card.is-intro {
+    width: min(560px, calc(100vw - 24px), max(230px, calc((100vh - 210px) * 1.367)));
+    width: min(560px, calc(100vw - 24px), max(230px, calc((100dvh - 210px) * 1.367)));
+  }
 }
 
 /* Mobile portrait: compact HUD, slimmer banner, full-height playfield. */
@@ -2861,8 +2855,12 @@ body {
 
 /* Respect reduced-motion preferences for decorative effects. */
 @media (prefers-reduced-motion: reduce) {
-  .swipe-blade { animation: none; opacity: 0; }  .juice-burst i { animation: none; opacity: 0; }
-  .fruit.dying-hit .fruit-half-img { animation: none; opacity: 0; transition: opacity 0.15s linear; }
+  .swipe-blade { animation: none; opacity: 0; }
+  /* Under reduced motion, sliced fruits disappear instantly — no flying
+     halves (JS never creates them), no canvas juice (JS never spawns it)
+     and no fallback fades. */
+  .fruit-piece { display: none; }
+  .tutorial-fruit-demo.is-cut .demo-half { animation: none; opacity: 0; }
   .fruit.dying-miss .fruit-img,
   .fruit.dying-miss .fruit-label { animation: none; opacity: 0; transition: opacity 0.15s linear; }
   .fruit.dying-hit .fruit-img,
@@ -2876,7 +2874,6 @@ body {
   .chip-combo.is-flare b,
   .chip-combo.is-flare .hud-ico { animation: none; }
   .chip-combo.is-hot b { animation: none; }
-  #trail-line { filter: none; }
   .hud-progress-fill { transition: none; }
   /* Reduced motion: the question card jumps straight to its top slot. */
   .question-card,
@@ -3368,6 +3365,28 @@ body {
 }
 .tutorial-fruit-demo img { height: 120px; }
 .tutorial-fruit-demo .fruit-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+/* Practice slice: the whole apple hides and its two real cut halves
+   (gameplay artwork) fly apart — a miniature of the in-game split. */
+.tutorial-fruit-demo .demo-half {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 120px;
+  transform: translate(-50%, -50%);
+}
+.tutorial-fruit-demo.is-cut > img:not(.demo-half) { visibility: hidden; }
+.tutorial-fruit-demo.is-cut .demo-half { display: block; }
+.tutorial-fruit-demo.is-cut .demo-half.is-left { animation: demo-half-left 0.9s cubic-bezier(0.2, 0.6, 0.5, 1) forwards; }
+.tutorial-fruit-demo.is-cut .demo-half.is-right { animation: demo-half-right 0.9s cubic-bezier(0.2, 0.6, 0.5, 1) forwards; }
+@keyframes demo-half-left {
+  0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+  100% { transform: translate(calc(-50% - 44px), calc(-50% + 58px)) rotate(-36deg); opacity: 0; }
+}
+@keyframes demo-half-right {
+  0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+  100% { transform: translate(calc(-50% + 44px), calc(-50% + 58px)) rotate(36deg); opacity: 0; }
+}
 .tutorial-fruit-demo .demo-blade {
   position: absolute;
   left: -6%;

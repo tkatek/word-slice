@@ -424,6 +424,18 @@ const SOUNDS = [
       add(buf, noiseBurst(0.09, rng, { amp: 0.3, type: 'hp', q: 0.9, sweep: [0.25, 4000, 7000, 5000] }));
     },
   },
+  {
+    path: 'slicing/blade-whoosh-4.wav', peak: 0.72,
+    render(buf, rng) {
+      // Long diagonal slicing motion: the blade sweeps across the whole
+      // ear, so the swell develops later and lasts longer than the short
+      // swipes. 260→1500→420 Hz over 0.28 s with a slight wobble (the
+      // blade rotating through the diagonal) + a faint HF layer that only
+      // joins mid-swing — the far edge of the blade passing last.
+      add(buf, noiseBurst(0.28, rng, { amp: 1.0, q: 1.0, sweep: [0.55, 260, 1500, 420], env: envBell(N(0.28), 2.5, 4), wobbleHz: 6.5, wobbleDepth: 0.06 }));
+      add(buf, noiseBurst(0.14, rng, { amp: 0.26, type: 'hp', q: 0.9, sweep: [0.4, 2800, 4600, 3200] }), 0.05);
+    },
+  },
 
   /* ---------------- slicing: juicy fruit cuts ----------------
    *
@@ -872,6 +884,7 @@ const DURATIONS = {
   'slicing/blade-whoosh-1.wav': 0.22,
   'slicing/blade-whoosh-2.wav': 0.30,
   'slicing/blade-whoosh-3.wav': 0.18,
+  'slicing/blade-whoosh-4.wav': 0.30,
   'slicing/fruit-cut-1.wav': 0.24,
   'slicing/fruit-cut-2.wav': 0.27,
   'slicing/fruit-cut-3.wav': 0.22,

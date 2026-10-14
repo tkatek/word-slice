@@ -122,9 +122,7 @@ const els = {
   questionWave: $('question-wave'),
   playfield: $('playfield'),
   fruitsLayer: $('fruits-layer'),
-  trailSvg: $('trail'),
-  trailLine: $('trail-line'),
-  trailGlow: $('trail-glow'),
+  trailCanvas: $('trail'),
   resizeNotice: $('resize-notice'),
   btnAudioHint: $('btn-audio-hint'),
   pauseOverlay: $('pause-overlay'),
@@ -156,33 +154,103 @@ const els = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Fruit sprites: whole + cut PNGs with per-fruit juice color          */
+/* Fruit sprites: whole + left/right cut halves with per-fruit juice  */
+/* color and calibrated label layout.                                  */
+/*                                                                     */
+/* Every sprite is a 256×256 RGBA canvas whose visible fruit body is   */
+/* smaller than the canvas (see assets/fruits/manifest.json). The      */
+/* calibration numbers below come from that manifest's contentBounds:  */
+/*   bodyFrac  — largest visible body axis ÷ canvas (resizes the box   */
+/*               so every fruit body spans the engine's collision      */
+/*               circle: consistent visual scale across shapes)        */
+/*   labelX/Y  — anchor of the word label, nudged below stems/leaves   */
+/*   maxTextWidth — label budget as a fraction of the canvas width     */
 /* ------------------------------------------------------------------ */
 
-const FRUIT_APPEARANCES = {
-  watermelon: { whole: 'assets/fruits/sprites/uncuted/watermelon.webp', cut: 'assets/fruits/sprites/cuted/watermelon.webp', juice: '#e5484d', scale: 1.04 },
-  pineapple: { whole: 'assets/fruits/sprites/uncuted/pineapple.webp', cut: 'assets/fruits/sprites/cuted/pineapple.webp', juice: '#ffcf3d', scale: 1.08 },
-  apple: { whole: 'assets/fruits/sprites/uncuted/apple.webp', cut: 'assets/fruits/sprites/cuted/apple.webp', juice: '#f2e8c9', scale: 1.04 },
-  orange: { whole: 'assets/fruits/sprites/uncuted/orange.webp', cut: 'assets/fruits/sprites/cuted/orange.webp', juice: '#ffa53d', scale: 1.04 },
-  strawberry: { whole: 'assets/fruits/sprites/uncuted/strawberry.webp', cut: 'assets/fruits/sprites/cuted/strawberry.webp', juice: '#e63950', scale: 1.06 },
-  blueberry: { whole: 'assets/fruits/sprites/uncuted/blueberry.webp', cut: 'assets/fruits/sprites/cuted/blueberry.webp', juice: '#5a8dee', scale: 1.04 },
-  banana: { whole: 'assets/fruits/sprites/uncuted/banana.webp', cut: 'assets/fruits/sprites/cuted/banana.webp', juice: '#ffe97a', scale: 1.18 },
-  pear: { whole: 'assets/fruits/sprites/uncuted/pear.webp', cut: 'assets/fruits/sprites/cuted/pear.webp', juice: '#d9e8a6', scale: 1.06 },
-  lemon: { whole: 'assets/fruits/sprites/uncuted/lemon.webp', cut: 'assets/fruits/sprites/cuted/lemon.webp', juice: '#ffd94d', scale: 1.04 },
-  kiwi: { whole: 'assets/fruits/sprites/uncuted/kiwi.webp', cut: 'assets/fruits/sprites/cuted/kiwi.webp', juice: '#9bcf3f', scale: 1.04 },
+const FRUIT_ASSETS = {
+  watermelon: {
+    whole: 'assets/fruits/uncuted/watermelon.png',
+    left: 'assets/fruits/cuted/watermelon_left.png',
+    right: 'assets/fruits/cuted/watermelon_right.png',
+    juice: '#e5484d', scale: 1.06, bodyFrac: 0.656,
+    labelX: 0.50, labelY: 0.505, maxTextWidth: 0.58,
+  },
+  apple: {
+    whole: 'assets/fruits/uncuted/apple.png',
+    left: 'assets/fruits/cuted/apple_left.png',
+    right: 'assets/fruits/cuted/apple_right.png',
+    juice: '#f2e8c9', scale: 1.05, bodyFrac: 0.676,
+    labelX: 0.50, labelY: 0.53, maxTextWidth: 0.60,
+  },
+  orange: {
+    whole: 'assets/fruits/uncuted/orange.png',
+    left: 'assets/fruits/cuted/orange_left.png',
+    right: 'assets/fruits/cuted/orange_right.png',
+    juice: '#ffa53d', scale: 1.05, bodyFrac: 0.637,
+    labelX: 0.50, labelY: 0.51, maxTextWidth: 0.59,
+  },
+  tomato: {
+    whole: 'assets/fruits/uncuted/tomato.png',
+    left: 'assets/fruits/cuted/tomato_left.png',
+    right: 'assets/fruits/cuted/tomato_right.png',
+    juice: '#e8402f', scale: 1.05, bodyFrac: 0.684,
+    labelX: 0.50, labelY: 0.535, maxTextWidth: 0.60,
+  },
+  peach: {
+    whole: 'assets/fruits/uncuted/peach.png',
+    left: 'assets/fruits/cuted/peach_left.png',
+    right: 'assets/fruits/cuted/peach_right.png',
+    juice: '#ffb98a', scale: 1.04, bodyFrac: 0.703,
+    labelX: 0.495, labelY: 0.52, maxTextWidth: 0.65,
+  },
+  melon: {
+    whole: 'assets/fruits/uncuted/melon.png',
+    left: 'assets/fruits/cuted/melon_left.png',
+    right: 'assets/fruits/cuted/melon_right.png',
+    juice: '#ffc178', scale: 1.05, bodyFrac: 0.684,
+    labelX: 0.50, labelY: 0.515, maxTextWidth: 0.63,
+  },
+  pomegranate: {
+    whole: 'assets/fruits/uncuted/pomegranate.png',
+    left: 'assets/fruits/cuted/pomegranate_left.png',
+    right: 'assets/fruits/cuted/pomegranate_right.png',
+    juice: '#c0283c', scale: 1.05, bodyFrac: 0.715,
+    labelX: 0.50, labelY: 0.53, maxTextWidth: 0.63,
+  },
+  lemon: {
+    whole: 'assets/fruits/uncuted/lemon.png',
+    left: 'assets/fruits/cuted/lemon_left.png',
+    right: 'assets/fruits/cuted/lemon_right.png',
+    juice: '#ffd94d', scale: 1.05, bodyFrac: 0.711,
+    labelX: 0.495, labelY: 0.525, maxTextWidth: 0.61,
+  },
+  plum: {
+    whole: 'assets/fruits/uncuted/plum.png',
+    left: 'assets/fruits/cuted/plum_left.png',
+    right: 'assets/fruits/cuted/plum_right.png',
+    juice: '#8e3a6b', scale: 1.04, bodyFrac: 0.738,
+    labelX: 0.50, labelY: 0.53, maxTextWidth: 0.63,
+  },
+  coconut: {
+    whole: 'assets/fruits/uncuted/coconut.png',
+    left: 'assets/fruits/cuted/coconut_left.png',
+    right: 'assets/fruits/cuted/coconut_right.png',
+    juice: '#f5eddc', scale: 1.06, bodyFrac: 0.633,
+    labelX: 0.50, labelY: 0.505, maxTextWidth: 0.58,
+  },
 };
 
-/** appearanceId -> { whole: Image, cut: Image } (only successfully loaded). */
+/** appearanceId -> { whole, left, right } Images (only successfully loaded). */
 const appearanceImages = new Map();
 
 function preloadAppearanceImages() {
   // Only the engine's answer pool needs decode-warm sprites; the rest of
   // the map stays available for menu/tutorial decoration art.
   for (const id of TUNING.APPEARANCES) {
-    const files = FRUIT_APPEARANCES[id];
+    const files = FRUIT_ASSETS[id];
     if (!files) continue;
     const entry = {};
-    for (const kind of ['whole', 'cut']) {
+    for (const kind of ['whole', 'left', 'right']) {
       const img = new Image();
       img.decoding = 'async';
       entry[kind] = img;
@@ -619,22 +687,23 @@ function openLevelsScreen() {
 const TUTORIAL_STEPS = [
   {
     title: '1 · Read the question',
-    img: 'assets/fruits/sprites/uncuted/watermelon.webp',
+    img: 'assets/fruits/uncuted/watermelon.png',
     text: 'Every round shows a challenge on the parchment banner, like "Slice the fruits.".',
   },
   {
     practice: true,
     title: '2 · Slice the matching fruit',
     fruit: 'apple',
-    fruitImg: 'assets/fruits/sprites/uncuted/apple.webp',
-    cutImg: 'assets/fruits/sprites/cuted/apple.webp',
+    fruitImg: 'assets/fruits/uncuted/apple.png',
+    cutLeftImg: 'assets/fruits/cuted/apple_left.png',
+    cutRightImg: 'assets/fruits/cuted/apple_right.png',
     text: 'Drag across the fruit carrying a word that matches. Try it: swipe through this apple!',
   },
   {
     title: '3 · Leave other fruits alone',
-    img: 'assets/fruits/sprites/uncuted/strawberry.webp',
+    img: 'assets/fruits/uncuted/tomato.png',
     label: 'table',
-    text: 'This strawberry says "table" — not a fruit. Slicing wrong words costs a heart, so let it fly by.',
+    text: 'This tomato says "table" — not a fruit. Slicing wrong words costs a heart, so let it fly by.',
   },
   {
     title: 'Ready to play!',
@@ -666,6 +735,16 @@ function renderTutorialStep() {
     img.src = step.fruitImg;
     img.alt = '';
     img.draggable = false;
+    // The two real cut halves, hidden until the practice swipe lands.
+    const halves = ['Left', 'Right'].map((side) => {
+      const half = document.createElement('img');
+      half.className = `demo-half is-${side.toLowerCase()}`;
+      half.src = step[`cut${side}Img`];
+      half.alt = '';
+      half.draggable = false;
+      demo.append(half);
+      return half;
+    });
     const label = document.createElement('span');
     label.className = 'fruit-label';
     label.textContent = step.fruit;
@@ -685,7 +764,10 @@ function renderTutorialStep() {
       if (startX === null || tutorialPracticeDone) return;
       if (Math.hypot(ev.clientX - startX, ev.clientY - startY) >= MIN) {
         tutorialPracticeDone = true;
-        img.src = step.cutImg; // the same cut artwork used in gameplay
+        // Same presentation swap as a real slice: the whole apple hides and
+        // its two cut halves fly apart along the swipe.
+        demo.classList.add('is-cut');
+        label.remove();
         blade.remove();
         // Same layered feedback as a real slice: whoosh, instant cut, then
         // the correctness cue slightly behind the cutting transient.
@@ -809,10 +891,13 @@ function tick(timestamp) {
   lastTimestamp = timestamp;
   if (engine && engine.state === ENGINE_STATES.PLAYING) {
     engine.update(dt); // engine clamps/bounds internally
+    // Cut halves are presentation-only, but they share the engine's clock:
+    // frozen while paused/hidden, never advanced by stale wall time.
+    if (!screens.game.hidden) stepCutPieces(dt);
   }
   stepIntro(dt);
   processEngineEvents();
-  renderFrame();
+  renderFrame(dt);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1028,7 +1113,7 @@ function stepIntro(dtSeconds) {
 /* Rendering                                                           */
 /* ------------------------------------------------------------------ */
 
-/** fruitId -> {root, img, label, x, y, appearanceId}; ACTIVE fruits only. */
+/** fruitId -> {root, img, label, x, y, vx, vy, rotation, appearanceId}; ACTIVE fruits only. */
 const fruitEls = new Map();
 /** Terminal fruit ids -> {kind, dirX, dirY} for the death animation. */
 const deathDetails = new Map();
@@ -1036,31 +1121,46 @@ const deathDetails = new Map();
 let dyingFruits = [];
 let floatNotes = [];
 let juiceBursts = [];
-/** Swipe trail points in playfield coordinates, pruned by age. */
-let trailPoints = [];
+/**
+ * Live cut-half fragments: {el, x, y, vx, vy, rotation, spin, age, lifetime,
+ * w, h}. Two per sliced fruit, each with independent motion, integrated by
+ * stepCutPieces() inside the single animation loop (never per-piece timers).
+ */
+let cutPieces = [];
+/** Hard ceiling for simultaneous cut halves (oldest dropped first). */
+const MAX_CUT_PIECES = 24;
+/** A cut half lives at most this many simulated seconds before fading out. */
+const CUT_PIECE_LIFETIME = 1.9;
+/** Live swipe blades ({points: [{x, y, t}], active}), newest last. Each
+ *  gesture is its own blade so rapid repeated swipes never visually
+ *  connect; blades fade and expire by age inside renderTrail(). */
+let blades = [];
+/** Tiny streak sparks shed by fast slashes (pooled, canvas-drawn). */
+let bladeSparks = [];
 /** Last swipe segment direction (unit vector) for slice FX bias. */
 let lastSliceDir = { x: 1, y: 0 };
 
 /**
- * Sprites are trimmed to the fruit body, so the box scales from the
- * engine's collision radius. Each fruit carries its own `scale`: round
- * fruits sit at ~1.04 (a hair larger than the collision circle so the
- * silhouette reads cleanly), while elongated shapes go larger so their
- * thin axes still feel sliceable — the circle itself always comes from
- * the engine and is never inflated here.
+ * Each fruit canvas carries transparent padding around the body, so the
+ * box scales from the engine's collision radius divided by bodyFrac (the
+ * body's largest axis ÷ canvas): every fruit's VISIBLE body then spans
+ * radius × 2 × scale pixels, keeping visual scale consistent across
+ * shapes. The circle itself always comes from the engine and is never
+ * inflated here.
  */
 function spriteBoxFor(fruit) {
-  const art = FRUIT_APPEARANCES[fruit.appearanceId];
+  const art = FRUIT_ASSETS[fruit.appearanceId];
   const images = appearanceImages.get(fruit.appearanceId);
   const whole = images && images.whole;
   const aspect = whole && whole.naturalWidth > 0 ? whole.naturalHeight / whole.naturalWidth : 1;
-  const scale = art && Number.isFinite(art.scale) ? art.scale : 1.04;
-  const w = Math.round(fruit.radius * 2 * scale);
+  const bodyFrac = art && art.bodyFrac > 0 ? art.bodyFrac : 0.66;
+  const scale = art && Number.isFinite(art.scale) ? art.scale : 1.05;
+  const w = Math.round(fruit.radius * 2 * scale / bodyFrac);
   const h = Math.round(w * aspect);
   return { w, h };
 }
 
-function renderFrame() {
+function renderFrame(frameDt = 0) {
   if (!engine || screens.game.hidden) {
     pruneDecorations();
     return;
@@ -1076,8 +1176,16 @@ function renderFrame() {
       fruitEls.set(fruit.id, entry);
     }
     syncFruitSprite(fruit, entry);
+    // Per-frame motion estimate feeds the cut halves' inherited velocity.
+    // Sane frame gaps only: throttled hidden-tab frames would produce a
+    // wild estimate, so the last good velocity is kept instead.
+    if (frameDt > 0 && frameDt <= 0.2) {
+      entry.vx = (fruit.x - entry.x) / frameDt;
+      entry.vy = (fruit.y - entry.y) / frameDt;
+    }
     entry.x = fruit.x;
     entry.y = fruit.y;
+    entry.rotation = fruit.rotation;
     // Pixel math (not translate(-50%)) keeps the center exact at any size.
     entry.root.style.transform =
       `translate(${fruit.x - entry.w / 2}px, ${fruit.y - entry.h / 2}px) rotate(${fruit.rotation}deg)`;
@@ -1092,7 +1200,7 @@ function renderFrame() {
     }
   }
 
-  renderTrail();
+  renderTrail(frameDt);
   pruneDecorations();
   renderHud();
 }
@@ -1118,14 +1226,20 @@ function createFruitElement(fruit) {
   label.className = 'fruit-label';
   label.textContent = fruit.optionText;
   // Base size from the collision radius, then shrink long words so they
-  // stay on the fruit body instead of spilling past its silhouette.
-  const base = Math.max(13, fruit.radius * 0.42);
+  // stay on the fruit body instead of spilling past its silhouette. The
+  // per-fruit layout anchor keeps the word centered on the visible body
+  // (stems and leaves push the anchor down where needed).
+  const art = FRUIT_ASSETS[fruit.appearanceId];
+  const base = Math.max(13, fruit.radius * 0.44);
   const chars = Math.max(2, fruit.optionText.length);
-  const fit = (Math.min(w, h) * 0.78) / (0.62 * chars); // bold ≈ 0.62em per char
+  const maxTextWidth = art && art.maxTextWidth > 0 ? art.maxTextWidth : 0.6;
+  const fit = (w * maxTextWidth) / (0.62 * chars); // bold ≈ 0.62em per char
   root.style.fontSize = `${Math.max(11, Math.round(Math.min(base, fit)))}px`;
+  root.style.setProperty('--lx', `${((art && art.labelX != null ? art.labelX : 0.5) * 100).toFixed(1)}%`);
+  root.style.setProperty('--ly', `${((art && art.labelY != null ? art.labelY : 0.52) * 100).toFixed(1)}%`);
   root.append(img, fallback, label);
   els.fruitsLayer.append(root);
-  return { root, img, w, h, x: fruit.x, y: fruit.y, appearanceId: fruit.appearanceId, artState: 'pending' };
+  return { root, img, w, h, x: fruit.x, y: fruit.y, vx: 0, vy: 0, rotation: fruit.rotation, appearanceId: fruit.appearanceId, artState: 'pending' };
 }
 
 /**
@@ -1145,7 +1259,7 @@ function syncFruitSprite(fruit, entry) {
     entry.h = box.h;
     entry.root.style.width = `${box.w}px`;
     entry.root.style.height = `${box.h}px`;
-    entry.img.src = FRUIT_APPEARANCES[fruit.appearanceId].whole;
+    entry.img.src = FRUIT_ASSETS[fruit.appearanceId].whole;
     entry.root.classList.add('has-img');
   } else {
     entry.artState = 'fallback'; // genuinely missing — keep the placeholder
@@ -1156,34 +1270,129 @@ function startDeathAnimation(fruitId, entry) {
   const detail = deathDetails.get(fruitId) || { kind: 'miss', dirX: 1, dirY: 0 };
   deathDetails.delete(fruitId);
   const { kind, dirX, dirY } = detail;
-  entry.root.classList.add('dying', kind === 'miss' ? 'dying-miss' : 'dying-hit');
-  if (kind !== 'miss') {
-    const files = FRUIT_APPEARANCES[entry.appearanceId];
-    const images = appearanceImages.get(entry.appearanceId);
-    const cut = images && images.cut;
-    const cutLoaded = !!(files && cut && cut.complete && cut.naturalWidth > 0);
-    if (cutLoaded) {
-      // One cut artwork, clipped into two copies that fly apart along the swipe.
-      for (const side of ['left', 'right']) {
-        const half = document.createElement('img');
-        half.className = `fruit-half-img half-${side}`;
-        half.src = files.cut;
-        half.alt = '';
-        half.draggable = false;
-        entry.root.append(half);
-      }
-      const spread = Math.max(34, entry.w * 0.22);
-      entry.root.style.setProperty('--dx', `${Math.round(Math.abs(dirX) * spread + 12)}px`);
-      entry.root.style.setProperty('--dy', `${Math.round(18 + Math.abs(dirY) * 18)}px`);
-      entry.root.style.setProperty('--hrdeg', `${Math.round(46 + Math.abs(dirY) * 40)}deg`);
-    } else {
-      // Cut art unavailable: keep the whole fruit visible and fade it out
-      // instead of leaving an empty gap where the fruit used to be.
-      entry.root.classList.add('no-cut');
-    }
-    spawnJuiceBurst(entry.x, entry.y, entry.appearanceId, dirX, dirY, entry.w);
+
+  if (kind === 'miss') {
+    entry.root.classList.add('dying', 'dying-miss');
+    dyingFruits.push({ el: entry.root, until: performance.now() + 560 });
+    return;
   }
-  dyingFruits.push({ el: entry.root, until: performance.now() + 560 });
+
+  // Sliced: the whole sprite and its word vanish the instant the two real
+  // cut halves take over from the same position and rotation.
+  const spawned = spawnCutPieces(entry, dirX, dirY);
+  if (spawned || prefersReducedMotion) {
+    entry.root.remove();
+  } else {
+    // Cut art unavailable: keep the whole fruit visible and fade it out
+    // instead of leaving an empty gap where the fruit used to be.
+    entry.root.classList.add('dying', 'dying-hit', 'no-cut');
+    dyingFruits.push({ el: entry.root, until: performance.now() + 560 });
+  }
+  spawnJuiceBurst(entry.x, entry.y, entry.appearanceId, dirX, dirY, entry.w);
+}
+
+/**
+ * Creates the two independently animated cut halves of a sliced fruit.
+ * Both half canvases are registered on the same 256×256 grid as the whole
+ * fruit (see assets/fruits/manifest.json), so drawing them in the whole
+ * fruit's exact box reproduces the intact fruit at t=0 and the split reads
+ * as one continuous object. Returns true when both halves were created.
+ */
+function spawnCutPieces(entry, dirX, dirY) {
+  if (prefersReducedMotion) return true; // separation still instant, just still
+  const art = FRUIT_ASSETS[entry.appearanceId];
+  const images = appearanceImages.get(entry.appearanceId);
+  const ready = (img) => !!(img && img.complete && img.naturalWidth > 0);
+  if (!art || !ready(images && images.left) || !ready(images && images.right)) return false;
+
+  // Separation axis: perpendicular of the actual swipe, damped toward the
+  // artwork's vertical cut plane so the halves read as left/right pieces
+  // whatever angle the blade crossed at.
+  let sx = -dirY;
+  let sy = dirX * 0.55;
+  const len = Math.hypot(sx, sy) || 1;
+  sx /= len;
+  sy /= len;
+  if (sx > 0) { sx = -sx; sy = -sy; } // the left half always departs toward -x
+
+  const impulse = Math.max(110, entry.w * 0.75); // separation speed, px/s
+  const kick = 24 + entry.h * 0.16;              // small upward energy at the cut
+  const gravity = engine && engine.playfield.h > 0
+    ? Math.max(520, engine.playfield.h * 0.95)
+    : 650;
+  const inheritX = Number.isFinite(entry.vx) ? entry.vx : 0;
+  const inheritY = Number.isFinite(entry.vy) ? entry.vy : 0;
+
+  for (const side of ['left', 'right']) {
+    const sign = side === 'left' ? 1 : -1;
+    const el = document.createElement('img');
+    el.className = 'fruit-piece';
+    el.src = art[side];
+    el.alt = '';
+    el.draggable = false;
+    el.style.width = `${entry.w}px`;
+    el.style.height = `${entry.h}px`;
+    el.style.transform =
+      `translate(${entry.x - entry.w / 2}px, ${entry.y - entry.h / 2}px) rotate(${entry.rotation || 0}deg)`;
+    els.fruitsLayer.append(el);
+    while (cutPieces.length >= MAX_CUT_PIECES) cutPieces.shift().el.remove();
+    cutPieces.push({
+      el,
+      x: entry.x,
+      y: entry.y,
+      vx: inheritX + sign * sx * impulse,
+      vy: inheritY + sign * sy * impulse - kick,
+      rotation: entry.rotation || 0,
+      // Left half rolls slightly counterclockwise, right half clockwise.
+      spin: (side === 'left' ? -1 : 1) * (70 + Math.random() * 60),
+      age: 0,
+      lifetime: CUT_PIECE_LIFETIME,
+      w: entry.w,
+      h: entry.h,
+    });
+  }
+  return true;
+}
+
+/**
+ * Time-based motion for the cut halves: inherited velocity + separation
+ * impulse, independent rotation, shared gravity, age-bounded lifetime with
+ * a short end fade, and removal once a piece leaves the board. Runs inside
+ * the single rAF loop only while the engine is PLAYING — gravity freezes
+ * with the game, and pieces never outlive the playfield.
+ */
+function stepCutPieces(dt) {
+  if (cutPieces.length === 0) return;
+  // Clamp throttled/stalled frames (hidden tab, occluded webview): the
+  // watchdog may drive the loop at ~1 fps, and an unclamped second would
+  // teleport the halves instead of letting them fall.
+  const step = Math.min(Math.max(dt, 0), 0.06);
+  const gravity = engine && engine.playfield.h > 0
+    ? Math.max(520, engine.playfield.h * 0.95)
+    : 650;
+  const bottom = engine ? engine.playfield.h : 800;
+  cutPieces = cutPieces.filter((p) => {
+    p.age += step;
+    p.vy += gravity * step;
+    p.x += p.vx * step;
+    p.y += p.vy * step;
+    p.rotation += p.spin * step;
+    if (p.age >= p.lifetime || p.y - p.h > bottom + 40) {
+      p.el.remove();
+      return false;
+    }
+    const fade = Math.min(1, (p.lifetime - p.age) / 0.3);
+    p.el.style.opacity = fade < 1 ? fade.toFixed(2) : '1';
+    p.el.style.transform =
+      `translate(${p.x - p.w / 2}px, ${p.y - p.h / 2}px) rotate(${p.rotation.toFixed(1)}deg)`;
+    return true;
+  });
+}
+
+/** Removes every live cut half (screen switch, restart, level change). */
+function clearCutPieces() {
+  for (const p of cutPieces) p.el.remove();
+  cutPieces = [];
 }
 
 /** Explicit decoration ceilings: bursts are pruned by age after 700 ms, but
@@ -1194,7 +1403,7 @@ const MAX_JUICE_BURSTS = 12;
 const MAX_FLOAT_NOTES = 24;
 
 function spawnJuiceBurst(x, y, appearanceId, dirX, dirY, size) {
-  const files = FRUIT_APPEARANCES[appearanceId];
+  const files = FRUIT_ASSETS[appearanceId];
   if (!files) return;
   while (juiceBursts.length >= MAX_JUICE_BURSTS) {
     juiceBursts.shift().el.remove();
@@ -1261,9 +1470,9 @@ function pruneDecorations() {
  * always run to completion and are pruned by pruneDecorations().
  */
 function clearTransientFx() {
-  trailPoints = [];
-  els.trailLine.setAttribute('points', '');
-  if (els.trailGlow) els.trailGlow.setAttribute('points', '');
+  blades = [];
+  bladeSparks = [];
+  clearTrailCanvas();
   for (const item of juiceBursts) item.el.remove();
   juiceBursts = [];
   for (const item of floatNotes) item.el.remove();
@@ -1273,30 +1482,314 @@ function clearTransientFx() {
 /**
  * Drops resolved fruit visuals when leaving the game screen (feedback,
  * results). Without this, stale entries in fruitEls would replay their
- * death animations on screen when the next round becomes visible.
+ * death animations on screen when the next round becomes visible, and
+ * mid-flight cut halves would come back frozen on the next screen.
  */
 function clearFruitVisuals() {
   for (const entry of fruitEls.values()) entry.root.remove();
   fruitEls.clear();
   deathDetails.clear();
+  clearCutPieces();
 }
 
-const TRAIL_LIFETIME_MS = 240;
-const TRAIL_MAX_POINTS = 24;
+/* ------------------------------------------------------------------ */
+/* Blade trail — a canvas-drawn slash, not a stroked line.             */
+/*                                                                     */
+/* Each frame the live gesture samples are Catmull-Rom resampled into  */
+/* a smooth centerline, then rendered as filled polygons whose width   */
+/* follows a blade profile: a sharp rise behind the leading tip, a     */
+/* slim body and a long taper to the tail. Three stacked widths        */
+/* (cyan halo → icy sheen → white core) fake a glow without any blur   */
+/* filter, which keeps mobile GPUs happy. Everything lives in one      */
+/* canvas, cleared and repainted only while anything is visible.       */
+/* ------------------------------------------------------------------ */
 
-function renderTrail() {
-  const now = performance.now();
-  trailPoints = trailPoints.filter((p) => now - p.t < TRAIL_LIFETIME_MS);
-  if (trailPoints.length > TRAIL_MAX_POINTS) {
-    trailPoints = trailPoints.slice(-TRAIL_MAX_POINTS);
+/** Sample lifetime: oldest points die first, so the trail shortens from
+ *  the tail toward the tip while the swipe is held still or released. */
+const BLADE_SAMPLE_MS = 260;
+const BLADE_MAX_POINTS = 40;   // per-blade sample ceiling
+const BLADE_MAX_ACTIVE = 3;    // simultaneous fading blades (rapid swipes)
+const BLADE_IDLE_FADE_MS = 70; // grace before a released blade fades
+const BLADE_FADE_MS = 170;     // released-blade fade duration
+const BLADE_MAX_SAMPLES = 64;  // resampled centerline ceiling (cost bound)
+const SPARK_MAX = 18;
+const SPARK_MIN_SPEED = 1.0;   // px/ms a slash must reach to shed sparks
+
+/** Glow layers, painted outermost first: {widthScale, fill}. widthScale
+ *  multiplies the blade profile's half-width for that layer. */
+const BLADE_LAYERS = [
+  { widthScale: 2.2, fill: 'rgba(125, 205, 255, 0.20)' },  // soft cyan halo
+  { widthScale: 1.35, fill: 'rgba(208, 238, 255, 0.50)' }, // icy sheen
+  { widthScale: 0.62, fill: 'rgba(255, 255, 255, 0.97)' }, // bright core
+];
+
+/** Canvas 2D context, fetched once on first use. */
+let trailCtx = null;
+/** True while the canvas may hold pixels — skips redundant clears. */
+let trailCanvasDirty = false;
+
+function trailContext() {
+  if (trailCtx === null && els.trailCanvas && els.trailCanvas.getContext) {
+    trailCtx = els.trailCanvas.getContext('2d');
   }
-  const points = trailPoints.map((p) => `${p.x},${p.y}`).join(' ');
-  els.trailLine.setAttribute('points', points);
-  if (els.trailGlow) els.trailGlow.setAttribute('points', points);
+  return trailCtx;
 }
 
+/** Sizes the trail canvas to the playfield. DPR-aware and capped at 2×
+ *  so high-density phones never quadruple the fill cost. A fresh backing
+ *  store is transparent, so this also wipes any stale trail. */
+function fitTrailCanvas(w, h) {
+  const canvas = els.trailCanvas;
+  if (!canvas) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.max(1, Math.round(w * dpr));
+  canvas.height = Math.max(1, Math.round(h * dpr));
+  const ctx = trailContext();
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  trailCanvasDirty = false;
+}
+
+function clearTrailCanvas() {
+  const ctx = trailContext();
+  if (!ctx || !trailCanvasDirty) return;
+  ctx.clearRect(0, 0, els.trailCanvas.width, els.trailCanvas.height);
+  trailCanvasDirty = false;
+}
+
+/** Begins a new blade at the swipe's exact start point (pointerdown). */
+function startBlade(x, y) {
+  const now = performance.now();
+  blades = blades.filter(
+    (b) => b.points.length > 0 && now - b.points[b.points.length - 1].t < BLADE_SAMPLE_MS,
+  );
+  if (blades.length >= BLADE_MAX_ACTIVE) blades.shift();
+  blades.push({ points: [{ x, y, t: now }], active: true });
+}
+
+/** Appends a sample to the active blade (the newest blade still tied to
+ *  a pressed pointer). Samples of released blades are dropped. */
 function pushTrailPoint(x, y) {
-  trailPoints.push({ x, y, t: performance.now() });
+  const blade = blades[blades.length - 1];
+  if (blade && blade.active) blade.points.push({ x, y, t: performance.now() });
+}
+
+/** Marks every blade as released so each fades out instead of lingering. */
+function releaseBlades() {
+  for (const blade of blades) blade.active = false;
+}
+
+/** Recent pointer speed in px/ms (last few samples) — drives the blade's
+ *  girth and spark shedding so fast slashes look heavier than slow ones. */
+function bladeSpeed(blade) {
+  const pts = blade.points;
+  if (pts.length < 2) return 0;
+  const a = pts[Math.max(0, pts.length - 4)];
+  const b = pts[pts.length - 1];
+  const dt = b.t - a.t;
+  return dt > 0 ? Math.hypot(b.x - a.x, b.y - a.y) / dt : 0;
+}
+
+/** Width profile along the blade, u = 0 at the leading tip → 1 at the
+ *  tail. A fast rise just behind the tip makes a knife-like point; a
+ *  gentle power curve then tapers the body to zero at the tail. */
+function bladeWidthAt(u) {
+  const TIP_SPAN = 0.22;
+  if (u < TIP_SPAN) return Math.pow(u / TIP_SPAN, 1.6);
+  const v = (u - TIP_SPAN) / (1 - TIP_SPAN);
+  return 1 - Math.pow(v, 1.25);
+}
+
+/** Catmull-Rom resample of a blade's live samples into ~step-px points,
+ *  oldest → newest. Smooths pointer jitter into an elegant curve and
+ *  bounds the polygon cost regardless of how many move events fired. */
+function resampleBlade(points, step) {
+  const out = [];
+  const n = points.length;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(n - 1, i + 2)];
+    const divisions = Math.max(1, Math.ceil(Math.hypot(p2.x - p1.x, p2.y - p1.y) / step));
+    // The newest segment stops short of its end point: the pointed tip
+    // vertex (extended past the last sample below) closes the polygon.
+    const limit = i === n - 2 ? divisions - 1 : divisions;
+    for (let j = 0; j <= limit; j++) {
+      const t = j / divisions;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      out.push({
+        x: 0.5 * (2 * p1.x + (-p0.x + p2.x) * t
+          + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2
+          + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+        y: 0.5 * (2 * p1.y + (-p0.y + p2.y) * t
+          + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2
+          + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+      });
+    }
+  }
+  return out;
+}
+
+/** Additive glow at the leading point — makes the motion direction
+ *  obvious and gives a held-still touch an instant soft dot. */
+function drawTipGlow(ctx, x, y, radius, env) {
+  if (env <= 0) return;
+  ctx.globalCompositeOperation = 'lighter';
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  grad.addColorStop(0, `rgba(255, 255, 255, ${(0.55 * env).toFixed(3)})`);
+  grad.addColorStop(0.35, `rgba(185, 228, 255, ${(0.22 * env).toFixed(3)})`);
+  grad.addColorStop(1, 'rgba(185, 228, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/** Paints one blade: three tapered polygon fills + a tip highlight, and
+ *  sheds streak sparks on fast slashes. Returns nothing; visibility is
+ *  handled by renderTrail(). */
+function drawBlade(ctx, blade, now) {
+  const pts = blade.points;
+  const last = pts[pts.length - 1];
+  const sinceLast = now - last.t;
+  const env = blade.active
+    ? 1
+    : Math.max(0, 1 - (sinceLast - BLADE_IDLE_FADE_MS) / BLADE_FADE_MS);
+  if (env <= 0) return;
+
+  // Just touched (or all middle samples expired): a soft dot appears
+  // instantly under the pointer, then grows into a slash as it moves.
+  if (pts.length < 2) {
+    drawTipGlow(ctx, last.x, last.y, 16, env);
+    return;
+  }
+
+  const speed = bladeSpeed(blade);
+  const maxW = Math.min(20, 10 + speed * 3.4); // speed-reactive girth
+
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  }
+  const samples = resampleBlade(pts, Math.max(7, total / (BLADE_MAX_SAMPLES - 1)));
+  const m = samples.length;
+  if (m < 2) {
+    drawTipGlow(ctx, last.x, last.y, 16, env);
+    return;
+  }
+
+  // Leading direction and the pointed tip vertex, extended slightly past
+  // the newest sample so the blade reads as cutting ahead of the finger.
+  const tip = samples[m - 1];
+  const before = samples[m - 2];
+  let dx = tip.x - before.x;
+  let dy = tip.y - before.y;
+  const dl = Math.hypot(dx, dy) || 1;
+  dx /= dl;
+  dy /= dl;
+  const tipX = tip.x + dx * maxW * 0.55;
+  const tipY = tip.y + dy * maxW * 0.55;
+
+  // Centerline + per-sample half-widths and normals, computed once and
+  // reused by every glow layer.
+  const spine = new Array(m);
+  for (let i = 0; i < m; i++) {
+    const a = samples[Math.max(0, i - 1)];
+    const b = samples[Math.min(m - 1, i + 1)];
+    let tx = b.x - a.x;
+    let ty = b.y - a.y;
+    const tl = Math.hypot(tx, ty) || 1;
+    tx /= tl;
+    ty /= tl;
+    spine[i] = {
+      x: samples[i].x,
+      y: samples[i].y,
+      nx: -ty,
+      ny: tx,
+      w: maxW * bladeWidthAt(1 - i / (m - 1)), // u: 0 at tail sample → 1 at tip sample
+    };
+  }
+
+  ctx.globalAlpha = env;
+  for (const layer of BLADE_LAYERS) {
+    const hw = layer.widthScale / 2;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    for (let i = m - 1; i >= 0; i--) { // left edge, newest → oldest
+      const s = spine[i];
+      ctx.lineTo(s.x + s.nx * s.w * hw, s.y + s.ny * s.w * hw);
+    }
+    for (let i = 0; i < m; i++) { // right edge, oldest → newest
+      const s = spine[i];
+      ctx.lineTo(s.x - s.nx * s.w * hw, s.y - s.ny * s.w * hw);
+    }
+    ctx.closePath();
+    ctx.fillStyle = layer.fill;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  drawTipGlow(ctx, tipX, tipY, maxW * 1.6, env);
+
+  // Fast slashes shed a few short-lived streaks off the blade tip.
+  if (blade.active && speed > SPARK_MIN_SPEED && !prefersReducedMotion
+    && bladeSparks.length < SPARK_MAX && Math.random() < 0.5) {
+    const spread = (Math.random() - 0.5) * 0.8;
+    const back = 0.35 + Math.random() * 0.4; // ejection speed vs swipe speed
+    bladeSparks.push({
+      x: tipX,
+      y: tipY,
+      vx: (-dx * back - dy * spread) * speed * 0.5,
+      vy: (-dy * back + dx * spread) * speed * 0.5,
+      t: now,
+      life: 140 + Math.random() * 160,
+    });
+  }
+}
+
+/** Advances and paints spark streaks; prunes expired ones in place. */
+function drawBladeSparks(ctx, dtSeconds, now) {
+  if (!bladeSparks.length) return;
+  const dtMs = Math.min(64, dtSeconds * 1000 || 16); // clamp stale frames
+  const surviving = [];
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 1.8;
+  for (const sp of bladeSparks) {
+    const age = now - sp.t;
+    if (age >= sp.life) continue;
+    sp.x += sp.vx * dtMs;
+    sp.y += sp.vy * dtMs;
+    const f = 1 - age / sp.life;
+    ctx.strokeStyle = `rgba(235, 248, 255, ${(0.75 * f * f).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.moveTo(sp.x, sp.y);
+    ctx.lineTo(sp.x - sp.vx * 34, sp.y - sp.vy * 34);
+    ctx.stroke();
+    surviving.push(sp);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  bladeSparks = surviving;
+}
+
+function renderTrail(dtSeconds = 0) {
+  const ctx = trailContext();
+  if (!ctx) return;
+  const now = performance.now();
+  for (const blade of blades) {
+    blade.points = blade.points.filter((p) => now - p.t < BLADE_SAMPLE_MS);
+  }
+  blades = blades.filter(
+    (b) => b.points.length > 0 && now - b.points[b.points.length - 1].t < BLADE_SAMPLE_MS,
+  );
+  if (!blades.length && !bladeSparks.length) {
+    clearTrailCanvas();
+    return;
+  }
+  clearTrailCanvas();
+  for (const blade of blades) drawBlade(ctx, blade, now);
+  drawBladeSparks(ctx, dtSeconds, now);
+  trailCanvasDirty = true;
 }
 
 /** "1:23" style elapsed-play-time label (engine simulation seconds). */
@@ -1875,8 +2368,17 @@ function showResults(report) {
 
 let activePointerId = null;
 let lastPoint = null;
-/** One blade whoosh per intentional slash gesture (never per move event). */
-let gestureWhooshPlayed = false;
+/**
+ * Blade-swish pacing per gesture: the first swish of a gesture plays
+ * immediately; a continued drag earns another swish only after BOTH real
+ * pointer travel and a short interval have accumulated since the last one.
+ * Never per move event — a stationary or slowly wiggling pointer stays
+ * silent, while long fast slashes keep swishing like a moving blade.
+ */
+const WHOOSH_RETRIGGER_DISTANCE = 50; // px of pointer travel between swishes
+const WHOOSH_RETRIGGER_MS = 130;      // …and at least this long since the last swish
+/** Last swish of the current gesture: { at, travel } — null until the first. */
+let gestureWhoosh = null;
 const MIN_SWIPE_DISTANCE = 3; // px; a stationary pointer must not cut
 
 function canSlice() {
@@ -1897,6 +2399,8 @@ function toLocal(event) {
 function clearGesture() {
   activePointerId = null;
   lastPoint = null;
+  gestureWhoosh = null; // pointercancel/up fully resets swish eligibility
+  releaseBlades(); // the slash fades out instead of lingering
 }
 
 function onPointerDown(event) {
@@ -1909,9 +2413,32 @@ function onPointerDown(event) {
     /* capture is best-effort */
   }
   lastPoint = toLocal(event);
-  gestureWhooshPlayed = false;
-  pushTrailPoint(lastPoint.x, lastPoint.y);
+  gestureWhoosh = null; // every new gesture starts with a fresh immediate swish
+  startBlade(lastPoint.x, lastPoint.y);
   event.preventDefault();
+}
+
+/**
+ * Swishes the blade for real movement: once at the start of a gesture and,
+ * on long moving drags, again after WHOOSH_RETRIGGER_DISTANCE px of travel
+ * and WHOOSH_RETRIGGER_MS — so the sound tracks the blade, not the event
+ * stream. The audio manager's short anti-spam cooldown only guards against
+ * synthetic duplicate bursts; it must never eat a genuine gesture (the old
+ * one-shot latch permanently lost a gesture's swish whenever the manager
+ * happened to reject it, which is why rapid swiping went silent).
+ */
+function maybePlayWhoosh(segmentDistance) {
+  const t = performance.now();
+  if (!gestureWhoosh) {
+    gestureWhoosh = { at: t, travel: 0 };
+    audioManager.play('bladeWhoosh');
+    return;
+  }
+  gestureWhoosh.travel += segmentDistance;
+  if (gestureWhoosh.travel >= WHOOSH_RETRIGGER_DISTANCE && t - gestureWhoosh.at >= WHOOSH_RETRIGGER_MS) {
+    gestureWhoosh = { at: t, travel: 0 };
+    audioManager.play('bladeWhoosh');
+  }
 }
 
 function onPointerMove(event) {
@@ -1922,10 +2449,7 @@ function onPointerMove(event) {
     if (distance >= MIN_SWIPE_DISTANCE && canSlice()) {
       // Remember the swipe direction so slice FX follow the blade.
       lastSliceDir = { x: (point.x - lastPoint.x) / distance, y: (point.y - lastPoint.y) / distance };
-      if (!gestureWhooshPlayed) {
-        gestureWhooshPlayed = true; // + the manager's cooldown blocks spam
-        audioManager.play('bladeWhoosh');
-      }
+      maybePlayWhoosh(distance);
       engine.slice(lastPoint.x, lastPoint.y, point.x, point.y);
       // Slice results (cut sound, float notes, death animations) are applied
       // by the next animation tick's processEngineEvents() — at most one
@@ -1967,7 +2491,7 @@ function applyLayout() {
   const areaChange = hadLayout ? Math.abs(w * h - lastLayout.w * lastLayout.h) / (lastLayout.w * lastLayout.h) : 0;
   const orientationFlipped = hadLayout && (w > h) !== (lastLayout.w > lastLayout.h);
   lastLayout = { w, h };
-  els.trailSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  fitTrailCanvas(w, h);
   if (!engine) return;
   engine.setPlayfield(w, h);
   // Mid-flight rounds keep their wave chunking; only recalc limits between
@@ -2015,9 +2539,10 @@ function cleanupGameDom() {
   dyingFruits = [];
   floatNotes = [];
   juiceBursts = [];
-  trailPoints = [];
-  els.trailLine.setAttribute('points', '');
-  if (els.trailGlow) els.trailGlow.setAttribute('points', '');
+  cutPieces = [];
+  blades = [];
+  bladeSparks = [];
+  clearTrailCanvas();
   els.resizeNotice.hidden = true;
   overlayPausedByUs = false;
   appRoot.classList.remove('is-paused'); // never carry the blur into a new screen

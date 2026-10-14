@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "canvasSize": [
+    256,
+    256
+  ],
+  "units": "pixels",
+  "basePath": "./",
+  "note": "Separate sprites extracted from the previously generated preview artwork. Native-resolution pixels are preserved, not upscaled. Cut halves are perspective illustrations, not a geometrically exact mesh split. Calibrate scale and pivots before in-game use.",
+  "fruits": {
+    "watermelon": {
+      "whole": {
+        "path": "uncuted/watermelon.png",
+        "contentBounds": [
+          47,
+          44,
+          162,
+          168
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      },
+      "left": {
+        "path": "cuted/watermelon_left.png",
+        "contentBounds": [
+          64,
+          49,
+          127,
+          158
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      },
+      "right": {
+        "path": "cuted/watermelon_right.png",
+        "contentBounds": [
+          65,
+          48,
+          126,
+          160
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      }
+    },
+    "apple": {
+      "whole": {
+        "path": "uncuted/apple.png",
+        "contentBounds": [
+          44,
+          41,
+          167,
+          173
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/apple_left.png",
+        "contentBounds": [
+          56,
+          47,
+          144,
+          161
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/apple_right.png",
+        "contentBounds": [
+          55,
+          46,
+          145,
+          163
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      }
+    },
+    "orange": {
+      "whole": {
+        "path": "uncuted/orange.png",
+        "contentBounds": [
+          46,
+          48,
+          163,
+          159
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/orange_left.png",
+        "contentBounds": [
+          60,
+          51,
+          135,
+          154
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      },
+      "right": {
+        "path": "cuted/orange_right.png",
+        "contentBounds": [
+          60,
+          51,
+          135,
+          154
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      }
+    },
+    "tomato": {
+      "whole": {
+        "path": "uncuted/tomato.png",
+        "contentBounds": [
+          44,
+          40,
+          168,
+          175
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/tomato_left.png",
+        "contentBounds": [
+          52,
+          49,
+          152,
+          157
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/tomato_right.png",
+        "contentBounds": [
+          51,
+          49,
+          153,
+          158
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      }
+    },
+    "peach": {
+      "whole": {
+        "path": "uncuted/peach.png",
+        "contentBounds": [
+          36,
+          38,
+          184,
+          180
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      },
+      "left": {
+        "path": "cuted/peach_left.png",
+        "contentBounds": [
+          58,
+          56,
+          140,
+          143
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/peach_right.png",
+        "contentBounds": [
+          55,
+          54,
+          146,
+          147
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      }
+    },
+    "melon": {
+      "whole": {
+        "path": "uncuted/melon.png",
+        "contentBounds": [
+          39,
+          40,
+          178,
+          175
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/melon_left.png",
+        "contentBounds": [
+          51,
+          44,
+          154,
+          167
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/melon_right.png",
+        "contentBounds": [
+          51,
+          45,
+          154,
+          166
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      }
+    },
+    "pomegranate": {
+      "whole": {
+        "path": "uncuted/pomegranate.png",
+        "contentBounds": [
+          39,
+          36,
+          177,
+          183
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/pomegranate_left.png",
+        "contentBounds": [
+          50,
+          46,
+          155,
+          163
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/pomegranate_right.png",
+        "contentBounds": [
+          49,
+          46,
+          157,
+          164
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      }
+    },
+    "lemon": {
+      "whole": {
+        "path": "uncuted/lemon.png",
+        "contentBounds": [
+          41,
+          37,
+          173,
+          182
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      },
+      "left": {
+        "path": "cuted/lemon_left.png",
+        "contentBounds": [
+          55,
+          51,
+          146,
+          154
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      },
+      "right": {
+        "path": "cuted/lemon_right.png",
+        "contentBounds": [
+          54,
+          51,
+          147,
+          154
+        ],
+        "contentCenter": [
+          127.5,
+          128.0
+        ]
+      }
+    },
+    "plum": {
+      "whole": {
+        "path": "uncuted/plum.png",
+        "contentBounds": [
+          38,
+          33,
+          179,
+          189
+        ],
+        "contentCenter": [
+          127.5,
+          127.5
+        ]
+      },
+      "left": {
+        "path": "cuted/plum_left.png",
+        "contentBounds": [
+          70,
+          71,
+          116,
+          113
+        ],
+        "contentCenter": [
+          128.0,
+          127.5
+        ]
+      },
+      "right": {
+        "path": "cuted/plum_right.png",
+        "contentBounds": [
+          63,
+          67,
+          130,
+          122
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      }
+    },
+    "coconut": {
+      "whole": {
+        "path": "uncuted/coconut.png",
+        "contentBounds": [
+          47,
+          48,
+          162,
+          160
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      },
+      "left": {
+        "path": "cuted/coconut_left.png",
+        "contentBounds": [
+          46,
+          55,
+          164,
+          146
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      },
+      "right": {
+        "path": "cuted/coconut_right.png",
+        "contentBounds": [
+          54,
+          57,
+          148,
+          142
+        ],
+        "contentCenter": [
+          128.0,
+          128.0
+        ]
+      }
+    }
+  }
+}

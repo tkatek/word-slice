@@ -13,27 +13,32 @@
     <code>tools/OPTIMIZATION.md</code>.
   </p>
   <ol>
-    <li>Run <code>node tools/prep-fruits.mjs</code> to regenerate the PNG
-        sprites from the original downloads (writes
-        <code>assets/fruits/sprites/&lt;group&gt;/&lt;fruit&gt;.png</code>).</li>
+    <li>The current fruit pack (<code>assets/fruits/uncuted/*.png</code>,
+        <code>assets/fruits/cuted/*_left|_right.png</code>) ships as
+        game-ready PNGs and is used as-is — this page is only needed if you
+        want to re-encode it (or the question card) to WebP.</li>
     <li>Serve the project (<code>npm start</code>) and open this file via the
         server URL: <code>http://localhost:3000/tools/convert-images-to-webp.html</code>.</li>
     <li>Click the button. Every converted file downloads as
         <code>&lt;name&gt;.webp</code> into your download folder.</li>
     <li>Move the downloaded <code>.webp</code> files over the matching paths in
-        <code>assets/fruits/sprites/</code> and <code>assets/ui/</code>, then
-        delete the superseded <code>.png</code> files.</li>
+        <code>assets/fruits/</code> and <code>assets/ui/</code>, delete the
+        superseded <code>.png</code> files, and update the paths in
+        <code>js/game.js</code> (<code>FRUIT_ASSETS</code>) to match.</li>
   </ol>
   <button id="run" type="button">Convert all images</button>
   <pre id="log"></pre>
 
   <script>
-    const FRUITS = ['watermelon', 'pineapple', 'apple', 'orange', 'strawberry',
-      'blueberry', 'banana', 'pear', 'lemon', 'kiwi'];
+    const FRUITS = ['watermelon', 'apple', 'orange', 'tomato', 'peach',
+      'melon', 'pomegranate', 'lemon', 'plum', 'coconut'];
     // [path, maxEdge (null = keep size), quality]
     const JOBS = [
-      ...FRUITS.map((f) => [`../assets/fruits/sprites/uncuted/${f}.png`, 384, 0.9]),
-      ...FRUITS.map((f) => [`../assets/fruits/sprites/cuted/${f}.png`, 384, 0.9]),
+      ...FRUITS.map((f) => [`../assets/fruits/uncuted/${f}.png`, null, 0.9]),
+      ...FRUITS.flatMap((f) => [
+        [`../assets/fruits/cuted/${f}_left.png`, null, 0.9],
+        [`../assets/fruits/cuted/${f}_right.png`, null, 0.9],
+      ]),
       ['../assets/ui/question-card.png', null, 0.85],
     ];
     const log = (m) => { document.getElementById('log').textContent += m + '\n'; };

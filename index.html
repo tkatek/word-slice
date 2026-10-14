@@ -83,19 +83,19 @@
         <ol class="how-steps" aria-label="How the game works">
           <li class="how-step">
             <span class="how-step-num">1</span>
-            <span class="how-step-art"><img src="assets/fruits/sprites/uncuted/watermelon.webp" alt="" loading="lazy"></span>
+            <span class="how-step-art"><img src="assets/fruits/uncuted/watermelon.png" alt="" loading="lazy"></span>
             <strong class="how-step-title">Read the challenge</strong>
             <p class="how-step-text">A question banner tells you which words to look for.</p>
           </li>
           <li class="how-step">
             <span class="how-step-num">2</span>
-            <span class="how-step-art swipe-demo"><img src="assets/fruits/sprites/uncuted/orange.webp" alt="" loading="lazy"><i class="swipe-blade"></i></span>
+            <span class="how-step-art swipe-demo"><img src="assets/fruits/uncuted/orange.png" alt="" loading="lazy"><i class="swipe-blade"></i></span>
             <strong class="how-step-title">Slice the correct fruits</strong>
             <p class="how-step-text">Swipe through each fruit carrying a matching word.</p>
           </li>
           <li class="how-step">
             <span class="how-step-num">3</span>
-            <span class="how-step-art"><img src="assets/fruits/sprites/uncuted/strawberry.webp" alt="" loading="lazy"></span>
+            <span class="how-step-art"><img src="assets/fruits/uncuted/tomato.png" alt="" loading="lazy"></span>
             <strong class="how-step-title">Avoid wrong answers</strong>
             <p class="how-step-text">Wrong slices cost a heart — three hearts is all you get.</p>
           </li>
@@ -269,10 +269,15 @@
 
           <div id="playfield" class="playfield">
             <div id="fruits-layer" class="fruits-layer" aria-hidden="true"></div>
-            <svg id="trail" class="trail" aria-hidden="true" preserveAspectRatio="none">
-              <polyline id="trail-glow" points="" />
-              <polyline id="trail-line" points="" />
-            </svg>
+            <!-- Juice FX layer: organic splash + droplets painted per frame
+                 into this single canvas (see js/juice.js). Sits above the
+                 separating fruit halves and below the blade trail; never
+                 intercepts input. -->
+            <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+            <!-- Blade slash trail: drawn per frame into this single canvas
+                 (tapered polygon with glow layers — see renderTrail in
+                 js/game.js). No per-move DOM nodes, no SVG filter costs. -->
+            <canvas id="trail" class="trail" aria-hidden="true"></canvas>
 
             <div id="resize-notice" class="resize-notice" hidden>
               Screen size changed — the round will restart in a moment.
@@ -556,7 +561,7 @@
             <li class="hstep">
               <span class="hstep-num" aria-hidden="true">2</span>
               <span class="hstep-art art-swipe" aria-hidden="true">
-                <img src="assets/fruits/sprites/uncuted/orange.webp" alt="" loading="lazy">
+                <img src="assets/fruits/uncuted/orange.png" alt="" loading="lazy">
                 <svg class="swipe-trail" viewBox="0 0 64 44" focusable="false">
                   <path d="M6 34 C18 40 34 36 44 22 C49 15 52 10 58 6" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="7" stroke-linecap="round"/>
                   <path d="M6 34 C18 40 34 36 44 22 C49 15 52 10 58 6" fill="none" stroke="#ffd94d" stroke-width="3.4" stroke-linecap="round"/>
@@ -570,7 +575,7 @@
             <li class="hstep">
               <span class="hstep-num" aria-hidden="true">3</span>
               <span class="hstep-art art-avoid" aria-hidden="true">
-                <img src="assets/fruits/sprites/uncuted/strawberry.webp" alt="" loading="lazy">
+                <img src="assets/fruits/uncuted/tomato.png" alt="" loading="lazy">
                 <svg class="avoid-x" viewBox="0 0 24 24" focusable="false">
                   <path d="M5 5l14 14M19 5L5 19" fill="none" stroke="#e5484d" stroke-width="4.2" stroke-linecap="round"/>
                 </svg>

@@ -117,11 +117,17 @@ export function writeAudioSettings(storage, settings) {
 export const AUDIO_MANIFEST = Object.freeze({
   bladeWhoosh: {
     // Movement only — always clearly quieter than an actual fruit cut.
-    bus: 'gameplay', gain: 0.5, cooldownMs: 160, priority: 6, pitchVar: 0.08,
+    // The cooldown here is a short anti-spam guard for synthetic/duplicate
+    // input bursts, NOT the gesture rhythm: normal rapid swiping is paced
+    // by the movement gates in game.js (first swish immediate, further
+    // swishes after real pointer travel + ~130 ms), so it must never be
+    // held back by a cooldown left over from an earlier gesture.
+    bus: 'gameplay', gain: 0.5, cooldownMs: 50, priority: 6, pitchVar: 0.08,
     files: [
       'assets/audio/slicing/blade-whoosh-1.wav',
       'assets/audio/slicing/blade-whoosh-2.wav',
       'assets/audio/slicing/blade-whoosh-3.wav',
+      'assets/audio/slicing/blade-whoosh-4.wav',
     ],
   },
   fruitCut: {
@@ -353,6 +359,8 @@ export function createAudioManager(deps = {}) {
   /** events that already used (or lost) their handoff — one shot each. */
   const handoffUsed = new Set();
   const lastPlayedAt = new Map();
+  /** event -> index of the variation played last (no immediate repeats). */
+  const lastVariant = new Map();
   const activeVoices = new Set();
   const sequenceTimers = new Set();
   const stateListeners = new Set();
@@ -736,7 +744,16 @@ export function createAudioManager(deps = {}) {
     lastPlayedAt.set(event, t);
 
     const pool = buffers.get(event);
-    const buffer = pool[Math.floor(rng() * pool.length) % pool.length];
+    // Controlled randomness: any variation may follow, except the one that
+    // just played — rapid repeated swishes never echo the same sample twice
+    // in a row (rotation-style variety without a predictable order).
+    const prev = pool.length > 1 ? lastVariant.get(event) : undefined;
+    let index = Math.floor(rng() * pool.length) % pool.length;
+    if (prev !== undefined && index === prev) {
+      index = (index + 1 + Math.floor(rng() * (pool.length - 1))) % pool.length;
+    }
+    lastVariant.set(event, index);
+    const buffer = pool[index];
     const rate = 1 + (rng() * 2 - 1) * (def.pitchVar || 0);
 
     let source;

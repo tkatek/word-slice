@@ -129,8 +129,6 @@ body {
 .muted { color: var(--ink-dim); }
 .small { font-size: 0.9rem; }
 .error-text { color: var(--bad); margin: 8px 0 16px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65), 0 0 10px rgba(0, 0, 0, 0.4); }
-.instructions { margin: 14px 0; line-height: 1.45; }
-.instructions.small { margin: 10px 0; color: var(--ink-dim); }
 
 /* ---------------------------------------------------------------- */
 /* Wooden signboard logo (Word = gold, Slice = blue, leaves)         */
@@ -251,8 +249,6 @@ body {
 }
 .btn-big { padding: 14px 22px; font-size: 1.05rem; }
 .btn-small { padding: 6px 12px; font-size: 0.88rem; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-.btn-row .btn { flex: 1 1 140px; }
 .btn-wood {
   background: linear-gradient(180deg, var(--wood-1), var(--wood-2));
   border-color: var(--wood-3);
@@ -1337,7 +1333,6 @@ body {
 }
 .parchment h2, .parchment-card h2 { color: var(--wood-ink); }
 .parchment .muted, .parchment-card .muted { color: #5f431c; }
-.help-list, .help-steps { text-align: left; margin: 6px 0; padding-left: 20px; line-height: 1.55; }
 
 /* ---------------------------------------------------------------- */
 /* Cinematic pause: frozen scene → grayscale + blur, one Play button */

@@ -357,12 +357,13 @@ by a teacher. It must be reviewed before being used with real learners.
 - Timed slicing is inherently difficult for some players; no accessibility claim is
   made for the timed mode.
 
-## Verification (2026-10 audit)
+## Verification (2026-10 final audit)
 
-Automated: 112 tests / 16 suites pass (`npm test`), covering engine state
+Automated: 189 tests / 33 suites pass (`npm test`), covering engine state
 transitions, scoring/hearts, collision geometry, waves, pause/resume,
 intro scheduling, level unlocking, stars, achievements, progress
-persistence, question-data validation and the audio manager.
+persistence, question-data validation, asset loading and the audio
+manager.
 
 Browser-emulated (ZCode in-app Chromium, driven via real DOM clicks and
 PointerEvents): zero horizontal overflow at 320/360/375/390/414/430/768/
@@ -377,7 +378,16 @@ overlay) were each driven end-to-end. Measured JS frame cost at
 1920×1080 with a full board: ~0.1 ms average / 0.2 ms p95 per frame
 (60 fps budget = 16.7 ms); DOM effect nodes are bounded and pruned.
 
-Fixed during the audit: the compact question banner hid its
+The 2026-10-14 final production audit re-verified: the merged data pack
+validates (180 questions across 12 levels), all 33 audio files pass
+`node tools/make-audio.mjs --check`, live gameplay in the in-app
+Chromium held 60 fps (p50 16.7 ms per frame) with a real user playing,
+an early-heart-loss session produced accurate results stats and a
+correct "Try Again" (never "Next Level"), and opening the HUD Levels
+shortcut mid-round pauses the engine behind the leave confirmation.
+See `TEACHER-REVIEW.md` for the outstanding pedagogical review items.
+
+Fixed during the earlier audit: the compact question banner hid its
 "Wave N of M" line whenever a long prompt wrapped to 3+ lines (the fit
 measured the wave line after the over-full flex column had already
 crushed it to zero height — now measured by content with a

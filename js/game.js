@@ -1206,6 +1206,7 @@ function renderFrame(frameDt = 0) {
   }
 
   renderTrail(frameDt);
+  renderJuiceFx(frameDt);
   pruneDecorations();
   renderHud();
 }
@@ -1293,7 +1294,7 @@ function startDeathAnimation(fruitId, entry) {
     entry.root.classList.add('dying', 'dying-hit', 'no-cut');
     dyingFruits.push({ el: entry.root, until: performance.now() + 560 });
   }
-  spawnJuiceBurst(entry.x, entry.y, entry.appearanceId, dirX, dirY, entry.w);
+  spawnJuiceBurst(entry.x, entry.y, entry.appearanceId, dirX, dirY, entry.w, detail.speedPxMs || 0);
 }
 
 /**
@@ -1529,25 +1530,21 @@ function pruneDecorations() {
     item.el.remove();
     return false;
   });
-  juiceBursts = juiceBursts.filter((item) => {
-    if (item.until > now) return true;
-    item.el.remove();
-    return false;
-  });
 }
 
 /**
- * Clears input-driven transient effects (swipe trail, juice, floating
- * notes). Used when pausing, hiding the tab, opening an overlay, and
- * when a round or session ends — resolution animations (dying fruits)
- * always run to completion and are pruned by pruneDecorations().
+ * Clears input-driven transient effects (swipe trail, floating notes).
+ * Used when pausing, hiding the tab, opening an overlay, and when a round
+ * or session ends. Juice bursts are intentionally NOT cleared here: the
+ * engine pause already freezes them, and full resets go through
+ * clearJuiceFx() so pause/resume can freeze and continue them correctly.
+ * Resolution animations (dying fruits) always run to completion and are
+ * pruned by pruneDecorations().
  */
 function clearTransientFx() {
   blades = [];
   bladeSparks = [];
   clearTrailCanvas();
-  for (const item of juiceBursts) item.el.remove();
-  juiceBursts = [];
   for (const item of floatNotes) item.el.remove();
   floatNotes = [];
 }
@@ -1563,6 +1560,7 @@ function clearFruitVisuals() {
   fruitEls.clear();
   deathDetails.clear();
   clearCutPieces();
+  clearJuiceFx();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1662,14 +1660,18 @@ function bladeSpeed(blade) {
   return dt > 0 ? Math.hypot(b.x - a.x, b.y - a.y) / dt : 0;
 }
 
-/** Width profile along the blade, u = 0 at the leading tip → 1 at the
- *  tail. A fast rise just behind the tip makes a knife-like point; a
- *  gentle power curve then tapers the body to zero at the tail. */
-function bladeWidthAt(u) {
-  const TIP_SPAN = 0.22;
-  if (u < TIP_SPAN) return Math.pow(u / TIP_SPAN, 1.6);
-  const v = (u - TIP_SPAN) / (1 - TIP_SPAN);
-  return 1 - Math.pow(v, 1.25);
+/** Width profile along the blade. f runs 0 (tail sample) → 1 (newest
+ *  sample): the body holds a full-width plateau with a long power-curve
+ *  taper to the tail, while needle() collapses the width over an ABSOLUTE
+ *  distance (≈ 2.2 × max width) from the tip — so short flicks and long
+ *  slashes both end in a crisp knife point instead of a blunt ramp. */
+function bladeWidthAt(f, fromTip, maxW) {
+  const BODY_START = 0.45;
+  const body = f >= BODY_START
+    ? 1
+    : 1 - Math.pow((BODY_START - f) / BODY_START, 1.25);
+  const needle = Math.pow(Math.min(1, fromTip / (maxW * 2.2)), 1.35);
+  return body * needle;
 }
 
 /** Catmull-Rom resample of a blade's live samples into ~step-px points,
@@ -1760,12 +1762,13 @@ function drawBlade(ctx, blade, now) {
   const dl = Math.hypot(dx, dy) || 1;
   dx /= dl;
   dy /= dl;
-  const tipX = tip.x + dx * maxW * 0.55;
-  const tipY = tip.y + dy * maxW * 0.55;
+  const tipX = tip.x + dx * maxW * 0.7;
+  const tipY = tip.y + dy * maxW * 0.7;
 
   // Centerline + per-sample half-widths and normals, computed once and
   // reused by every glow layer.
   const spine = new Array(m);
+  const stepLen = total / Math.max(1, m - 1); // ≈ uniform spacing after resampling
   for (let i = 0; i < m; i++) {
     const a = samples[Math.max(0, i - 1)];
     const b = samples[Math.min(m - 1, i + 1)];
@@ -1774,12 +1777,13 @@ function drawBlade(ctx, blade, now) {
     const tl = Math.hypot(tx, ty) || 1;
     tx /= tl;
     ty /= tl;
+    // f: 0 at the tail sample → 1 at the newest; fromTip: arc px to the tip.
     spine[i] = {
       x: samples[i].x,
       y: samples[i].y,
       nx: -ty,
       ny: tx,
-      w: maxW * bladeWidthAt(1 - i / (m - 1)), // u: 0 at tail sample → 1 at tip sample
+      w: maxW * bladeWidthAt(i / (m - 1), (m - 1 - i) * stepLen, maxW),
     };
   }
 
@@ -1979,7 +1983,12 @@ function processEngineEvents() {
   for (const event of engine.drainEvents()) {
     switch (event.type) {
       case 'correctSlice': {
-        deathDetails.set(event.fruitId, { kind: 'hit', dirX: lastSliceDir.x, dirY: lastSliceDir.y });
+        deathDetails.set(event.fruitId, {
+          kind: 'hit',
+          dirX: lastSliceDir.x,
+          dirY: lastSliceDir.y,
+          speedPxMs: lastSliceSpeed,
+        });
         addFloatNote(event.x, event.y, `+${event.points}`, 'good');
         // The physical cut plays instantly at the hit; the educational cues
         // follow ~80ms later so the cutting transient stays unmistakable.
@@ -1993,7 +2002,12 @@ function processEngineEvents() {
         break;
       }
       case 'wrongSlice': {
-        deathDetails.set(event.fruitId, { kind: 'hit', dirX: lastSliceDir.x, dirY: lastSliceDir.y });
+        deathDetails.set(event.fruitId, {
+          kind: 'hit',
+          dirX: lastSliceDir.x,
+          dirY: lastSliceDir.y,
+          speedPxMs: lastSliceSpeed,
+        });
         addFloatNote(event.x, event.y, `${event.optionText} ✗ −1 heart`, 'bad');
         els.hudHearts.classList.remove('lost');
         void els.hudHearts.offsetWidth; // restart the animation
@@ -2486,6 +2500,7 @@ function onPointerDown(event) {
     /* capture is best-effort */
   }
   lastPoint = toLocal(event);
+  lastMoveAt = performance.now(); // rebase speed measurement for the gesture
   gestureWhoosh = null; // every new gesture starts with a fresh immediate swish
   startBlade(lastPoint.x, lastPoint.y);
   event.preventDefault();
@@ -2516,12 +2531,15 @@ function maybePlayWhoosh(segmentDistance) {
 
 function onPointerMove(event) {
   if (activePointerId === null || event.pointerId !== activePointerId) return;
+  const now = performance.now();
   const point = toLocal(event);
   if (lastPoint) {
     const distance = Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
     if (distance >= MIN_SWIPE_DISTANCE && canSlice()) {
-      // Remember the swipe direction so slice FX follow the blade.
+      // Remember the swipe direction and speed so slice FX follow the
+      // blade (a fast slash bursts juicier — bounded in js/juice.js).
       lastSliceDir = { x: (point.x - lastPoint.x) / distance, y: (point.y - lastPoint.y) / distance };
+      lastSliceSpeed = Math.min(3, distance / Math.max(4, now - lastMoveAt));
       maybePlayWhoosh(distance);
       engine.slice(lastPoint.x, lastPoint.y, point.x, point.y);
       // Slice results (cut sound, float notes, death animations) are applied
@@ -2533,6 +2551,7 @@ function onPointerMove(event) {
   }
   pushTrailPoint(point.x, point.y);
   lastPoint = point;
+  lastMoveAt = now;
 }
 
 function onPointerEnd(event) {
@@ -2565,6 +2584,7 @@ function applyLayout() {
   const orientationFlipped = hadLayout && (w > h) !== (lastLayout.w > lastLayout.h);
   lastLayout = { w, h };
   fitTrailCanvas(w, h);
+  fitFxCanvas(w, h);
   if (!engine) return;
   engine.setPlayfield(w, h);
   // Mid-flight rounds keep their wave chunking; only recalc limits between
@@ -2611,7 +2631,7 @@ function cleanupGameDom() {
   deathDetails.clear();
   dyingFruits = [];
   floatNotes = [];
-  juiceBursts = [];
+  clearJuiceFx(); // canvas juice layer must not leak across sessions
   cutPieces = [];
   blades = [];
   bladeSparks = [];
@@ -3024,6 +3044,7 @@ function init() {
         stepIntro,
         renderFrame,
         processEngineEvents,
+        fx: () => juiceFx,
       };
     },
   });

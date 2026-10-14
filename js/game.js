@@ -43,6 +43,10 @@ import {
 } from './round-intro.js';
 import { JuiceFx } from './juice.js';
 import { audioManager } from './audio.js';
+import {
+  assetManager,
+  essentialStartupAssets,
+} from './assets.js';
 
 /* ------------------------------------------------------------------ */
 /* DOM references                                                      */
@@ -66,6 +70,11 @@ const appRoot = $('app');
 const els = {
   errorText: $('error-text'),
   btnRetry: $('btn-retry'),
+  loaderBar: $('loader-bar'),
+  loaderBarFill: $('loader-bar-fill'),
+  loaderPercent: $('loader-percent'),
+  loaderNote: $('loader-note'),
+  loaderFruitImg: document.querySelector('#loader-fruit img'),
   menuBest: $('menu-best'),
   btnPlay: $('btn-play'),
   btnPlayLabel: $('btn-play-label'),
@@ -111,6 +120,10 @@ const els = {
   hudHearts: $('hud-hearts'),
   hudTimerValue: $('hud-timer-value'),
   btnPause: $('btn-pause'),
+  btnHudLevels: $('btn-hud-levels'),
+  leaveOverlay: $('leave-confirm-overlay'),
+  btnLeaveCancel: $('btn-leave-cancel'),
+  btnLeaveConfirm: $('btn-leave-confirm'),
   questionCard: $('question-card'),
   qcBody: document.querySelector('#question-card .qc-body'),
   bannerSlotCard: $('banner-slot-card'),
@@ -147,11 +160,13 @@ const els = {
   rsReviewGrid: $('rs-review-grid'),
   btnReviewAll: $('btn-review-all'),
   rsReviewOverlay: $('rs-review-overlay'),
+  rsReviewScroll: $('rs-review-scroll'),
+  rsDetailStats: $('rs-detail-stats'),
   rsReviewList: $('rs-review-list'),
   btnReviewClose: $('btn-review-close'),
   btnNextLevel: $('btn-next-level'),
   btnNextLevelLabel: $('btn-next-level-label'),
-  btnAgain: $('btn-again'),
+  btnDetails: $('btn-details'),
   btnMenu: $('btn-menu'),
 };
 
@@ -159,9 +174,10 @@ const els = {
 /* Fruit sprites: whole + left/right cut halves with per-fruit juice  */
 /* color and calibrated label layout.                                  */
 /*                                                                     */
-/* Every sprite is a 256×256 RGBA canvas whose visible fruit body is   */
-/* smaller than the canvas (see assets/fruits/manifest.json). The      */
-/* calibration numbers below come from that manifest's contentBounds:  */
+/* Image PATHS live in js/assets.js (FRUIT_IMAGE_PATHS) — the single   */
+/* manifest, preloaded and decode-verified by the asset manager before */
+/* any round may launch. This table keeps only the per-fruit render    */
+/* calibration derived from assets/fruits/manifest.json:               */
 /*   bodyFrac  — largest visible body axis ÷ canvas (resizes the box   */
 /*               so every fruit body spans the engine's collision      */
 /*               circle: consistent visual scale across shapes)        */
@@ -171,97 +187,56 @@ const els = {
 
 const FRUIT_ASSETS = {
   watermelon: {
-    whole: 'assets/fruits/uncuted/watermelon.png',
-    left: 'assets/fruits/cuted/watermelon_left.png',
-    right: 'assets/fruits/cuted/watermelon_right.png',
     juice: '#e5484d', scale: 1.06, bodyFrac: 0.656,
     labelX: 0.50, labelY: 0.505, maxTextWidth: 0.58,
   },
   apple: {
-    whole: 'assets/fruits/uncuted/apple.png',
-    left: 'assets/fruits/cuted/apple_left.png',
-    right: 'assets/fruits/cuted/apple_right.png',
     juice: '#f2e8c9', scale: 1.05, bodyFrac: 0.676,
     labelX: 0.50, labelY: 0.53, maxTextWidth: 0.60,
   },
   orange: {
-    whole: 'assets/fruits/uncuted/orange.png',
-    left: 'assets/fruits/cuted/orange_left.png',
-    right: 'assets/fruits/cuted/orange_right.png',
     juice: '#ffa53d', scale: 1.05, bodyFrac: 0.637,
     labelX: 0.50, labelY: 0.51, maxTextWidth: 0.59,
   },
   tomato: {
-    whole: 'assets/fruits/uncuted/tomato.png',
-    left: 'assets/fruits/cuted/tomato_left.png',
-    right: 'assets/fruits/cuted/tomato_right.png',
     juice: '#e8402f', scale: 1.05, bodyFrac: 0.684,
     labelX: 0.50, labelY: 0.535, maxTextWidth: 0.60,
   },
   peach: {
-    whole: 'assets/fruits/uncuted/peach.png',
-    left: 'assets/fruits/cuted/peach_left.png',
-    right: 'assets/fruits/cuted/peach_right.png',
     juice: '#ffb98a', scale: 1.04, bodyFrac: 0.703,
     labelX: 0.495, labelY: 0.52, maxTextWidth: 0.65,
   },
   melon: {
-    whole: 'assets/fruits/uncuted/melon.png',
-    left: 'assets/fruits/cuted/melon_left.png',
-    right: 'assets/fruits/cuted/melon_right.png',
     juice: '#ffc178', scale: 1.05, bodyFrac: 0.684,
     labelX: 0.50, labelY: 0.515, maxTextWidth: 0.63,
   },
   pomegranate: {
-    whole: 'assets/fruits/uncuted/pomegranate.png',
-    left: 'assets/fruits/cuted/pomegranate_left.png',
-    right: 'assets/fruits/cuted/pomegranate_right.png',
     juice: '#c0283c', scale: 1.05, bodyFrac: 0.715,
     labelX: 0.50, labelY: 0.53, maxTextWidth: 0.63,
   },
   lemon: {
-    whole: 'assets/fruits/uncuted/lemon.png',
-    left: 'assets/fruits/cuted/lemon_left.png',
-    right: 'assets/fruits/cuted/lemon_right.png',
     juice: '#ffd94d', scale: 1.05, bodyFrac: 0.711,
     labelX: 0.495, labelY: 0.525, maxTextWidth: 0.61,
   },
   plum: {
-    whole: 'assets/fruits/uncuted/plum.png',
-    left: 'assets/fruits/cuted/plum_left.png',
-    right: 'assets/fruits/cuted/plum_right.png',
     juice: '#8e3a6b', scale: 1.04, bodyFrac: 0.738,
     labelX: 0.50, labelY: 0.53, maxTextWidth: 0.63,
   },
   coconut: {
-    whole: 'assets/fruits/uncuted/coconut.png',
-    left: 'assets/fruits/cuted/coconut_left.png',
-    right: 'assets/fruits/cuted/coconut_right.png',
     juice: '#f5eddc', scale: 1.06, bodyFrac: 0.633,
     labelX: 0.50, labelY: 0.505, maxTextWidth: 0.58,
   },
 };
 
-/** appearanceId -> { whole, left, right } Images (only successfully loaded). */
-const appearanceImages = new Map();
-
-function preloadAppearanceImages() {
-  // Only the engine's answer pool needs decode-warm sprites; the rest of
-  // the map stays available for menu/tutorial decoration art.
-  for (const id of TUNING.APPEARANCES) {
-    const files = FRUIT_ASSETS[id];
-    if (!files) continue;
-    const entry = {};
-    for (const kind of ['whole', 'left', 'right']) {
-      const img = new Image();
-      img.decoding = 'async';
-      entry[kind] = img;
-      img.src = files[kind];
-      // Warm decode so the first slice of each fruit never stutters.
-      if (typeof img.decode === 'function') img.decode().catch(() => {});
-    }
-    appearanceImages.set(id, entry);
-  }
+/**
+ * appearanceId -> decoded { whole, left, right } Images, owned and
+ * preloaded by the asset manager (js/assets.js). Gameplay is gated on
+ * these being genuinely ready, so a fruit spawn or slice never waits on
+ * the network — every fruit of the same type reuses these cached
+ * decoded images.
+ */
+function fruitImagesOf(appearanceId) {
+  return assetManager.fruitImages(appearanceId) || null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -454,15 +429,41 @@ function closeResetConfirm() {
   els.btnResetBest.focus({ preventScroll: true });
 }
 
+/* Leave-level confirmation (HUD Levels shortcut during an unfinished
+   round). Rides the app-overlay pause contract: opening it pauses the
+   live round and suspends gameplay audio; Stay resumes the exact
+   interrupted state; Leave Level discards the session through
+   quitToLevels(), which records no result — earned stars, best scores,
+   unlocks and achievements in storage are never touched. */
+let leaveReturnFocus = null;
+
+function openLeaveConfirm(fromEl) {
+  leaveReturnFocus = activeElementOr(fromEl);
+  openAppOverlay(els.leaveOverlay);
+  els.btnLeaveCancel.focus({ preventScroll: true }); // the safe choice first
+}
+
+function closeLeaveConfirm() {
+  closeAppOverlay(els.leaveOverlay); // Stay: resume the paused round
+  if (leaveReturnFocus) {
+    leaveReturnFocus.focus({ preventScroll: true });
+    leaveReturnFocus = null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Level data loading                                                  */
 /* ------------------------------------------------------------------ */
 
 let loadAttempt = 0;
+/** Level-fetch units already banked (0..3) — feeds the loading bar. */
+let levelLoadUnits = 0;
 
 async function loadLevelPack() {
   const attempt = ++loadAttempt;
+  levelLoadUnits = 0;
   setScreen('loading');
+  updateLoaderProgress();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -478,6 +479,8 @@ async function loadLevelPack() {
       const data = await response.json();
       if (attempt !== loadAttempt) return;
       pack.stages.push(...data.stages);
+      levelLoadUnits += 1; // real per-file progress for the loading bar
+      updateLoaderProgress();
     }
     const validation = validateLevelsPack(pack);
     if (!validation.ok) {
@@ -489,7 +492,7 @@ async function loadLevelPack() {
         levelQuestions.set(level.id, level.questions);
       }
     }
-    autoStartSession(); // straight into gameplay — the menu is not shown
+    maybeAutoStart(); // straight into gameplay — never before assets are ready
   } catch (err) {
     if (attempt !== loadAttempt) return;
     levelQuestions = null;
@@ -545,6 +548,85 @@ function autoStartSession() {
     return;
   }
   startGame(autoLevelChoice());
+}
+
+/**
+ * Level data alone is never enough to start: rounds may only launch when
+ * the essential fruit sprites are decoded and cached (the asset manager
+ * gates this), so no fruit ever flies as a placeholder ball.
+ */
+function maybeAutoStart() {
+  if (assetManager.isEssentialReady()) autoStartSession();
+}
+
+/* ------------------------------------------------------------------ */
+/* Startup orchestration: loading screen with REAL progress           */
+/* ------------------------------------------------------------------ */
+
+/** The loading bar counts essential images + the three level files. */
+const LEVEL_FETCH_UNITS = 3;
+/** Startup run ticket — a Retry supersedes any still-running attempt. */
+let startupRun = 0;
+
+/**
+ * Paints the loading bar from the ACTUAL state of loadable work: decoded
+ * essential images + parsed level files. No timers, no simulated fill.
+ */
+function updateLoaderProgress() {
+  const assets = assetManager.getProgress();
+  const total = assets.total + LEVEL_FETCH_UNITS;
+  const loaded = assets.loaded + levelLoadUnits;
+  const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+  if (els.loaderBar) {
+    els.loaderBarFill.style.width = `${pct}%`;
+    els.loaderBar.setAttribute('aria-valuenow', String(pct));
+  }
+  if (els.loaderPercent) els.loaderPercent.textContent = `Loading assets… ${pct}%`;
+}
+
+/**
+ * Loads everything a first session needs — level data AND the essential
+ * fruit/background/question-card images — in parallel, then (and only
+ * then) starts gameplay. A failure shows the error screen with a Retry
+ * that reloads only what is missing; successfully decoded assets are
+ * never downloaded again.
+ */
+async function startup() {
+  const run = ++startupRun;
+  levelLoadUnits = 0;
+  setScreen('loading');
+  if (els.loaderFruitImg) {
+    // Same versioned URL the manager preloads — one shared cache entry,
+    // so the decorative loader fruit costs no extra request.
+    const fruitSrc = assetManager.getPath('watermelon', 'whole');
+    if (els.loaderFruitImg.getAttribute('src') !== fruitSrc) {
+      els.loaderFruitImg.src = fruitSrc;
+    }
+  }
+  updateLoaderProgress(); // honest 0% baseline before anything lands
+
+  // Essential images for THIS viewport (the orientation-matching
+  // background only — the other variant is never fetched).
+  assetManager.registerEssentialImages(essentialStartupAssets());
+
+  const levelsDone = loadLevelPack().then(() => true, () => false); // its errors show the error screen
+  let result;
+  try {
+    result = await assetManager.loadEssentialAssets({ onProgress: updateLoaderProgress });
+  } catch {
+    result = { ok: false, failed: assetManager.getFailedAssets() };
+  }
+  await levelsDone;
+  if (run !== startupRun) return; // superseded by a newer Retry
+
+  if (!result.ok) {
+    els.errorText.textContent =
+      'Some game images couldn\u2019t load. Check your connection, then retry.';
+    setScreen('error');
+    return;
+  }
+  if (!levelQuestions) return; // loadLevelPack already showed the error screen
+  if (appState === 'LOADING') autoStartSession(); // maybeAutoStart may have raced ahead
 }
 
 function renderMenu() {
@@ -689,21 +771,21 @@ function openLevelsScreen() {
 const TUTORIAL_STEPS = [
   {
     title: '1 · Read the question',
-    img: 'assets/fruits/uncuted/watermelon.png',
+    img: assetManager.getPath('watermelon', 'whole'),
     text: 'Every round shows a challenge on the parchment banner, like "Slice the fruits.".',
   },
   {
     practice: true,
     title: '2 · Slice the matching fruit',
     fruit: 'apple',
-    fruitImg: 'assets/fruits/uncuted/apple.png',
-    cutLeftImg: 'assets/fruits/cuted/apple_left.png',
-    cutRightImg: 'assets/fruits/cuted/apple_right.png',
+    fruitImg: assetManager.getPath('apple', 'whole'),
+    cutLeftImg: assetManager.getPath('apple', 'left'),
+    cutRightImg: assetManager.getPath('apple', 'right'),
     text: 'Drag across the fruit carrying a word that matches. Try it: swipe through this apple!',
   },
   {
     title: '3 · Leave other fruits alone',
-    img: 'assets/fruits/uncuted/tomato.png',
+    img: assetManager.getPath('tomato', 'whole'),
     label: 'table',
     text: 'This tomato says "table" — not a fruit. Slicing wrong words costs a heart, so let it fly by.',
   },
@@ -925,7 +1007,8 @@ let lastCountdownSecond = -1;
 
 function appOverlayOpen() {
   return !els.menuHowOverlay.hidden || !els.settingsOverlay.hidden
-    || !els.confirmOverlay.hidden || !els.tutorialOverlay.hidden;
+    || !els.confirmOverlay.hidden || !els.tutorialOverlay.hidden
+    || !els.leaveOverlay.hidden;
 }
 
 /** Countdown/flight may only advance on visible, unpaused gameplay. */
@@ -1155,7 +1238,7 @@ let lastMoveAt = 0;
  */
 function spriteBoxFor(fruit) {
   const art = FRUIT_ASSETS[fruit.appearanceId];
-  const images = appearanceImages.get(fruit.appearanceId);
+  const images = fruitImagesOf(fruit.appearanceId);
   const whole = images && images.whole;
   const aspect = whole && whole.naturalWidth > 0 ? whole.naturalHeight / whole.naturalWidth : 1;
   const bodyFrac = art && art.bodyFrac > 0 ? art.bodyFrac : 0.66;
@@ -1249,15 +1332,17 @@ function createFruitElement(fruit) {
 }
 
 /**
- * Shows the whole-fruit PNG as soon as it has loaded; until then the CSS
- * placeholder ball carries the fruit. A late load re-boxes the element to
- * the sprite's true aspect ratio (renderFrame re-centers from entry.w/h).
+ * Shows the whole-fruit PNG. Startup gating (js/assets.js + startup())
+ * guarantees the decoded sprite is already cached, so this resolves on
+ * the fruit's first rendered frame; the pending → image upgrade path is
+ * kept as a defensive in-place upgrade for any late arrival. A late load
+ * re-boxes the element to the sprite's true aspect ratio (renderFrame
+ * re-centers from entry.w/h).
  */
 function syncFruitSprite(fruit, entry) {
   if (entry.artState !== 'pending') return;
-  const images = appearanceImages.get(fruit.appearanceId);
-  const whole = images && images.whole;
-  if (!whole || !whole.complete) return; // still in flight
+  const whole = assetManager.getFruit(fruit.appearanceId, 'whole');
+  if (!whole || !whole.complete) return; // still in flight (defensive)
   if (whole.naturalWidth > 0) {
     entry.artState = 'image';
     const box = spriteBoxFor(fruit); // aspect is now known
@@ -1265,7 +1350,7 @@ function syncFruitSprite(fruit, entry) {
     entry.h = box.h;
     entry.root.style.width = `${box.w}px`;
     entry.root.style.height = `${box.h}px`;
-    entry.img.src = FRUIT_ASSETS[fruit.appearanceId].whole;
+    entry.img.src = assetManager.getPath(fruit.appearanceId, 'whole');
     entry.root.classList.add('has-img');
   } else {
     entry.artState = 'fallback'; // genuinely missing — keep the placeholder
@@ -1307,7 +1392,7 @@ function startDeathAnimation(fruitId, entry) {
 function spawnCutPieces(entry, dirX, dirY) {
   if (prefersReducedMotion) return true; // separation still instant, just still
   const art = FRUIT_ASSETS[entry.appearanceId];
-  const images = appearanceImages.get(entry.appearanceId);
+  const images = fruitImagesOf(entry.appearanceId);
   const ready = (img) => !!(img && img.complete && img.naturalWidth > 0);
   if (!art || !ready(images && images.left) || !ready(images && images.right)) return false;
 
@@ -1333,7 +1418,7 @@ function spawnCutPieces(entry, dirX, dirY) {
     const sign = side === 'left' ? 1 : -1;
     const el = document.createElement('img');
     el.className = 'fruit-piece';
-    el.src = art[side];
+    el.src = assetManager.getPath(entry.appearanceId, side);
     el.alt = '';
     el.draggable = false;
     el.style.width = `${entry.w}px`;
@@ -2213,10 +2298,30 @@ const RS_STAT_ICONS = {
   accuracy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2.6v3.6M12 17.8v3.6M2.6 12h3.6M17.8 12h3.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>',
 };
 
+/** The session's statistics rows shared by the compact summary and the
+    full Session Details overlay. Values come straight from the engine
+    report; the four `essential` rows are the ones the compact mobile
+    summary keeps (the rest move to the details view via CSS). */
+function rsStatRows(report) {
+  const percent = (value) => (value === null ? '—' : `${Math.round(value * 100)}%`);
+  const errorTone = (count) => (count > 0 ? 'is-error' : 'is-plain');
+  return [
+    ['score', 'Final Score', `${report.score}`, 'is-positive is-score', true],
+    ['rounds', 'Successful Rounds', `${report.successfulRounds}/${report.totalRounds}`, 'is-positive', true],
+    ['completed', 'Completed Rounds', `${report.completedRounds}/${report.totalRounds}`, 'is-positive', false],
+    ['correct', 'Correct Slices', `${report.correctSlices}`, 'is-positive', true],
+    ['wrong', 'Wrong Slices', `${report.wrongSlices}`, errorTone(report.wrongSlices), false],
+    ['missed', 'Missed Correct Targets', `${report.missedTargets}`, errorTone(report.missedTargets), false],
+    ['avoided', 'Avoided Distractors', `${report.avoidedDistractors}`, 'is-positive', false],
+    ['streak', 'Best Streak', `${report.bestStreak}`, 'is-positive', false],
+    ['accuracy', 'Slice Accuracy', percent(report.accuracy), 'is-positive', true],
+  ];
+}
+
 /** One statistics row: colored icon chip + dark-brown label + bold value. */
-function rsStatRow(icon, label, value, tone) {
+function rsStatRow(icon, label, value, tone, essential = false) {
   const row = document.createElement('div');
-  row.className = 'rs-stat';
+  row.className = 'rs-stat' + (essential ? ' is-essential' : '');
   const ico = document.createElement('span');
   ico.className = `rs-stat-ico ${icon}`;
   ico.innerHTML = RS_STAT_ICONS[icon];
@@ -2296,31 +2401,51 @@ function pickMistakePreviews(mistakes, max = 3) {
   return chosen.map((entry) => entry.m);
 }
 
-/* Full-review overlay (every mistake, complete explanations). */
+/* Session Details overlay state: the shown report feeds both the mistake
+   list and the full statistics; switching views never loses data. */
 let reviewMistakes = [];
+let lastReport = null;
 /** What the contextual gold button does for the shown result. */
 let nextLevelAction = 'retry';
 
 function openReviewOverlay() {
-  if (!reviewMistakes.length) return;
+  if (!lastReport) return;
+  // Full statistics block (all nine rows — nothing is dropped, the compact
+  // summary only ever HID the secondary ones).
+  els.rsDetailStats.replaceChildren();
+  for (const [icon, label, value, tone] of rsStatRows(lastReport)) {
+    els.rsDetailStats.append(rsStatRow(icon, label, value, tone));
+  }
+  // Every recorded mistake with the complete explanation text.
   els.rsReviewList.replaceChildren();
-  for (const [i, mistake] of reviewMistakes.entries()) {
-    const card = rsMistakeCard(mistake);
-    const num = document.createElement('span');
-    num.className = 'rs-mistake-num';
-    num.textContent = String(i + 1);
-    card.querySelector('.rs-mistake-head').prepend(num);
-    els.rsReviewList.append(card);
+  if (reviewMistakes.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'rs-review-perfect';
+    p.textContent = 'Perfect! No mistakes this session.';
+    els.rsReviewList.append(p);
+  } else {
+    const head = document.createElement('h3');
+    head.className = 'rs-review-list-title';
+    head.textContent = `All Mistakes (${reviewMistakes.length})`;
+    els.rsReviewList.append(head);
+    for (const [i, mistake] of reviewMistakes.entries()) {
+      const card = rsMistakeCard(mistake);
+      const num = document.createElement('span');
+      num.className = 'rs-mistake-num';
+      num.textContent = String(i + 1);
+      card.querySelector('.rs-mistake-head').prepend(num);
+      els.rsReviewList.append(card);
+    }
   }
   els.rsReviewOverlay.hidden = false;
-  els.rsReviewList.scrollTop = 0;
+  els.rsReviewScroll.scrollTop = 0;
   els.btnReviewClose.focus({ preventScroll: true });
 }
 
 function closeReviewOverlay() {
   if (els.rsReviewOverlay.hidden) return;
   els.rsReviewOverlay.hidden = true;
-  if (!els.btnReviewAll.hidden) els.btnReviewAll.focus({ preventScroll: true });
+  els.btnDetails.focus({ preventScroll: true });
 }
 
 function showResults(report) {
@@ -2388,28 +2513,17 @@ function showResults(report) {
   }
   audioManager.playSequence(celebration);
 
-  // Level Summary: every number comes straight from the engine report.
-  // Positive values read deep teal; meaningful error counts read red.
-  const percent = (value) => (value === null ? '—' : `${Math.round(value * 100)}%`);
-  const errorTone = (count) => (count > 0 ? 'is-error' : 'is-plain');
-  const rows = [
-    ['score', 'Final Score', `${report.score}`, 'is-positive is-score'],
-    ['rounds', 'Successful Rounds', `${report.successfulRounds}/${report.totalRounds}`, 'is-positive'],
-    ['completed', 'Completed Rounds', `${report.completedRounds}/${report.totalRounds}`, 'is-positive'],
-    ['correct', 'Correct Slices', `${report.correctSlices}`, 'is-positive'],
-    ['wrong', 'Wrong Slices', `${report.wrongSlices}`, errorTone(report.wrongSlices)],
-    ['missed', 'Missed Correct Targets', `${report.missedTargets}`, errorTone(report.missedTargets)],
-    ['avoided', 'Avoided Distractors', `${report.avoidedDistractors}`, 'is-positive'],
-    ['streak', 'Best Streak', `${report.bestStreak}`, 'is-positive'],
-    ['accuracy', 'Slice Accuracy', percent(report.accuracy), 'is-positive'],
-  ];
+  // Level Summary: every number comes straight from the engine report. The
+  // compact mobile layout keeps only the four essential tiles (CSS); the
+  // Session Details overlay always shows all nine.
+  lastReport = report;
   els.rsStats.replaceChildren();
-  for (const [icon, label, value, tone] of rows) {
-    els.rsStats.append(rsStatRow(icon, label, value, tone));
+  for (const [icon, label, value, tone, essential] of rsStatRows(report)) {
+    els.rsStats.append(rsStatRow(icon, label, value, tone, essential));
   }
 
-  // Mistake Review: three compact previews; everything stays reachable
-  // through the full-review overlay.
+  // Mistake Review: up to three compact previews on wide screens (one on
+  // phones via CSS); everything stays reachable through Session Details.
   reviewMistakes = report.mistakes;
   els.rsReviewGrid.replaceChildren();
   if (report.mistakes.length === 0) {
@@ -2425,8 +2539,8 @@ function showResults(report) {
     for (const mistake of previews) {
       els.rsReviewGrid.append(rsMistakeCard(mistake, { clamp: true }));
     }
-    els.btnReviewAll.hidden = report.mistakes.length <= previews.length;
-    els.btnReviewAll.textContent = `Review All Mistakes (${report.mistakes.length})`;
+    els.btnReviewAll.hidden = false;
+    els.btnReviewAll.textContent = `Review Mistakes (${report.mistakes.length})`;
   }
 
   // Contextual gold action: advance only when the next level is really
@@ -2855,10 +2969,9 @@ function initAudio() {
 
 function init() {
   progress = readProgress(window.localStorage);
-  preloadAppearanceImages(); // fire-and-forget; menu previews warm the cache
   initAudio();
 
-  els.btnRetry.addEventListener('click', () => loadLevelPack());
+  els.btnRetry.addEventListener('click', () => startup());
 
   // Menu + levels navigation. Every visible button works.
   const goMenu = () => renderMenu();
@@ -2902,11 +3015,12 @@ function init() {
   // Dialog keyboard behavior per open overlay: Escape closes that dialog,
   // Tab stays trapped inside it. (The tutorial overlay keeps its own
   // Skip-driven flow and is untouched here.)
-  for (const overlayEl of [els.settingsOverlay, els.menuHowOverlay, els.confirmOverlay]) {
+  for (const overlayEl of [els.settingsOverlay, els.menuHowOverlay, els.confirmOverlay, els.leaveOverlay]) {
     overlayEl.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') {
         ev.preventDefault();
         if (overlayEl === els.confirmOverlay) closeResetConfirm();
+        else if (overlayEl === els.leaveOverlay) closeLeaveConfirm();
         else if (overlayEl === els.menuHowOverlay) closeHowPanel();
         else closeSettingsPanel();
       } else if (ev.key === 'Tab') {
@@ -2951,6 +3065,26 @@ function init() {
       processEngineEvents();
     }
   });
+
+  // HUD Levels shortcut: mid-round (or mid-introduction) the leave
+  // confirmation guards the unfinished session; with nothing live — the
+  // HUD is only interactive on the game screen, so this branch is
+  // defensive — it goes straight to the existing level-select screen.
+  els.btnHudLevels.addEventListener('click', (ev) => {
+    const liveRound = Boolean(engine)
+      && (engine.state === ENGINE_STATES.PLAYING || engine.state === ENGINE_STATES.ROUND_READY);
+    if (!liveRound) {
+      quitToLevels();
+      return;
+    }
+    openLeaveConfirm(ev.currentTarget);
+  });
+  els.btnLeaveCancel.addEventListener('click', closeLeaveConfirm);
+  els.btnLeaveConfirm.addEventListener('click', () => {
+    els.leaveOverlay.hidden = true;
+    leaveReturnFocus = null;
+    quitToLevels(); // discards the session; also clears the overlay pause + audio suspension
+  });
   els.btnContinue.addEventListener('click', () => {
     if (engine && engine.state === ENGINE_STATES.ROUND_FEEDBACK) {
       engine.continueToNextRound(); // may finalize → sessionEnded event → results
@@ -2963,10 +3097,10 @@ function init() {
     }
   });
 
-  // Results actions. Retry Level and Level Map always restart/map; the
-  // gold button is contextual — it only advances when progression rules
-  // actually unlocked the next level.
-  els.btnAgain.addEventListener('click', () => currentLevel && startGame(currentLevel));
+  // Results actions. One contextual gold primary (Try Again / Next Level /
+  // Play Again — never a duplicate retry) plus Level Map and Details.
+  // The gold button only advances when progression rules actually
+  // unlocked the next level.
   els.btnNextLevel.addEventListener('click', () => {
     if (nextLevelAction === 'next') {
       const next = currentLevel && nextLevel(currentLevel.id);
@@ -2979,6 +3113,7 @@ function init() {
     else openLevelsScreen();
   });
   els.btnMenu.addEventListener('click', quitToLevels);
+  els.btnDetails.addEventListener('click', openReviewOverlay);
 
   // Full mistake review overlay (opened from the compact summary).
   els.btnReviewAll.addEventListener('click', openReviewOverlay);
@@ -3049,7 +3184,7 @@ function init() {
     },
   });
 
-  loadLevelPack();
+  startup();
 }
 
 init();

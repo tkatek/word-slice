@@ -17,16 +17,29 @@
 
     <!-- LOADING -->
     <section id="screen-loading" class="screen" aria-live="polite">
-      <div class="logo-signboard logo-lg" aria-hidden="true">
-        <div class="logo-ropes"><i></i><i></i></div>
-        <div class="logo-plank">
-          <span class="logo-leaf leaf-l"></span>
-          <span class="logo-word">Word</span>
-          <span class="logo-slice">Slice</span>
-          <span class="logo-leaf leaf-r"></span>
+      <div class="loader-stage">
+        <div class="logo-signboard logo-lg" aria-hidden="true">
+          <div class="logo-ropes"><i></i><i></i></div>
+          <div class="logo-plank">
+            <span class="logo-leaf leaf-l"></span>
+            <span class="logo-word">Word</span>
+            <span class="logo-slice">Slice</span>
+            <span class="logo-leaf leaf-r"></span>
+          </div>
         </div>
+        <div id="loader-fruit" class="loader-fruit" aria-hidden="true">
+          <!-- src is set by js/game.js from the asset manager's versioned
+               URL so the decorative watermelon shares the preloaded cache
+               entry instead of triggering a second request. -->
+          <img alt="" draggable="false">
+        </div>
+        <p id="loader-note" class="loader-note">Preparing your fruit adventure...</p>
+        <div id="loader-bar" class="loader-bar" role="progressbar" aria-label="Loading game assets"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="loader-bar-fill" class="loader-bar-fill"></div>
+        </div>
+        <p id="loader-percent" class="loader-percent">Loading assets… 0%</p>
       </div>
-      <p class="muted loading-note">Loading levels…</p>
     </section>
 
     <!-- ERROR -->
@@ -41,7 +54,7 @@
         </div>
       </div>
       <p id="error-text" class="error-text" role="alert"></p>
-      <button id="btn-retry" class="btn btn-primary btn-big" type="button">Retry</button>
+      <button id="btn-retry" class="btn btn-primary btn-big" type="button">Retry Loading</button>
     </section>
 
     <!-- MENU / FIRST PAGE -->
@@ -205,6 +218,18 @@
                 <span class="hud-round">Round <b id="hud-round-value">1/10</b></span>
               </span>
             </span>
+            <button id="btn-hud-levels" class="btn-hud-levels" type="button" aria-label="Open Levels" title="Open Levels">
+              <svg class="hud-levels-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3 6.4 9 4l6 2.4L21 4v13.6L15 20l-6-2.4L3 20V6.4z"
+                      fill="url(#hud-star-gold)" stroke="#8a5a2b" stroke-width="1.4" stroke-linejoin="round"/>
+                <path d="M4.2 6.9 8.2 5.3v11.5l-4 1.6V6.9z" fill="rgba(255,255,255,0.38)"/>
+                <path d="M9 4v13.6M15 6.4V20" fill="none" stroke="#8a5a2b" stroke-width="1.2" opacity="0.7"/>
+                <path d="M6.4 15.3c1.4-.3 1.9-1.4 2.8-2.5.9-1.2 2-1.9 3.5-1.5" fill="none"
+                      stroke="#5b3a00" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="0.5 2.5"/>
+                <circle cx="15.7" cy="16.2" r="1.55" fill="#e0524d" stroke="#5b3a00" stroke-width="0.9"/>
+                <circle cx="15.2" cy="15.7" r="0.42" fill="#ffd9d7"/>
+              </svg>
+            </button>
           </div>
 
           <div class="hud-zone hud-center">
@@ -473,21 +498,21 @@
             <button id="btn-review-all" class="rs-btn rs-btn-review" type="button" hidden></button>
           </div>
 
-          <!-- 5 · Arcade action bar: Retry Level · Level Map · contextual gold -->
+          <!-- 5 · Arcade action bar: contextual gold primary · Level Map · Details -->
           <div class="rs-actions">
-            <button id="btn-again" class="rs-btn rs-btn-teal" type="button">
-              <svg class="rs-btn-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M4.4 12a7.6 7.6 0 1 1 2.2 5.3" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                <path d="M4.6 9.4 3.6 13l3.7-.8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>Retry Level</span>
-            </button>
             <button id="btn-menu" class="rs-btn rs-btn-teal" type="button">
               <svg class="rs-btn-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M3 6.4 9 4l6 2.4L21 4v13.6L15 20l-6-2.4L3 20V6.4z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
                 <path d="M9 4v13.6M15 6.4V20" fill="none" stroke="currentColor" stroke-width="2.2"/>
               </svg>
               <span>Level Map</span>
+            </button>
+            <button id="btn-details" class="rs-btn rs-btn-teal" type="button">
+              <svg class="rs-btn-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="4" y="5" width="16" height="14" rx="2.6" fill="none" stroke="currentColor" stroke-width="2.2"/>
+                <path d="M8 9.5h8M8 13h8M8 16.5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span>Details</span>
             </button>
             <button id="btn-next-level" class="rs-btn rs-btn-gold" type="button">
               <span id="btn-next-level-label">Continue</span>
@@ -499,18 +524,21 @@
         </div>
       </div>
 
-      <!-- Full mistake review: dedicated accessible overlay with every
-           mistake and the complete explanation text. -->
+      <!-- Session Details: full statistics + every mistake with complete
+           explanations. May scroll; Back returns to the compact summary. -->
       <div id="rs-review-overlay" class="rs-review-overlay" hidden>
         <div class="rs-review-dialog" role="dialog" aria-modal="true" aria-labelledby="rs-review-dialog-title">
           <div class="rs-review-dialog-frame">
-            <h2 id="rs-review-dialog-title">Mistake Review</h2>
-            <p class="rs-review-dialog-sub">Every mistake from this session, with full explanations.</p>
-            <div id="rs-review-list" class="rs-review-list"></div>
+            <h2 id="rs-review-dialog-title">Session Details</h2>
+            <p class="rs-review-dialog-sub">Full statistics and every mistake from this session.</p>
+            <div id="rs-review-scroll" class="rs-review-scroll">
+              <dl id="rs-detail-stats" class="rs-stats rs-detail-stats"></dl>
+              <div id="rs-review-list" class="rs-review-list"></div>
+            </div>
             <button id="btn-review-close" class="rs-btn rs-btn-gold" type="button">
-              <span>Close</span>
+              <span>Back</span>
               <svg class="rs-btn-ico rs-btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
@@ -787,6 +815,35 @@
             <div class="confirm-actions">
               <button id="btn-confirm-cancel" class="btn-brown" type="button">Cancel</button>
               <button id="btn-confirm-reset" class="btn-gold btn-gold-sm" type="button">Reset score</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE-LEVEL CONFIRMATION: opened from the HUD's Levels shortcut
+         during an unfinished round. Gameplay pauses while it is visible;
+         Leave Level abandons the session without recording any result,
+         so previously earned progress always stays intact. -->
+    <div id="leave-confirm-overlay" class="app-overlay overlay-confirm" hidden>
+      <div class="ws-panel confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="leave-confirm-title" aria-describedby="leave-confirm-text">
+        <div class="ws-panel-scroll">
+          <div class="ws-panel-body confirm-body">
+            <span class="confirm-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M3 6.4 9 4l6 2.4L21 4v13.6L15 20l-6-2.4L3 20V6.4z" fill="none" stroke="#5b3a00" stroke-width="1.9" stroke-linejoin="round"/>
+                <path d="M9 4v13.6M15 6.4V20" fill="none" stroke="#5b3a00" stroke-width="1.6"/>
+                <path d="M6.2 15.2c1.5-.3 2-1.4 2.9-2.6.9-1.2 2.1-1.9 3.6-1.5" fill="none" stroke="#5b3a00" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="0.5 2.6"/>
+                <circle cx="15.9" cy="16.1" r="1.7" fill="#e0524d" stroke="#5b3a00" stroke-width="1"/>
+              </svg>
+            </span>
+            <h2 id="leave-confirm-title">Leave this level?</h2>
+            <p id="leave-confirm-text" class="confirm-text">
+              Your current unfinished session will end. Completed progress will remain saved.
+            </p>
+            <div class="confirm-actions">
+              <button id="btn-leave-cancel" class="btn-brown" type="button">Stay</button>
+              <button id="btn-leave-confirm" class="btn-gold btn-gold-sm" type="button">Leave Level</button>
             </div>
           </div>
         </div>

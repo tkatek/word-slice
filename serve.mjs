@@ -29,6 +29,10 @@ const MIME = {
   '.ogg': 'audio/ogg',
 };
 
+/** Static media the browser may cache (images, fonts, sounds, video). */
+const CACHEABLE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.mp3', '.wav', '.ogg', '.woff', '.woff2']);
+const isCacheableMedia = (filePath) => CACHEABLE_EXT.has(extname(filePath).toLowerCase());
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -39,11 +43,13 @@ const server = createServer(async (req, res) => {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('Forbidden');
       return;
-    }
-    const body = await readFile(filePath);
+    }    const body = await readFile(filePath);
     res.writeHead(200, {
       'Content-Type': MIME[extname(filePath).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
+      // Media/assets are cacheable like production (GitHub Pages), so a
+      // decoded sprite reused by a DOM <img> costs no second download;
+      // code and data stay no-store for instant dev reloads.
+      'Cache-Control': isCacheableMedia(filePath) ? 'public, max-age=300' : 'no-store',
     });
     res.end(body);
   } catch {

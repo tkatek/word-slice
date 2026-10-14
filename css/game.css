@@ -783,6 +783,51 @@ body {
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
+/* Levels shortcut beside the level badge: the pause button's dark-teal
+   twin — a glossy teal-navy coin with a thin golden rim carrying the
+   golden level-map icon (same map language as the results' Level Map
+   button). Opens the level-select screen; mid-round taps first ask for
+   confirmation. Sizes track .btn-pause at every breakpoint. */
+.btn-hud-levels {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 185, 62, 0.8); /* thin golden rim */
+  cursor: pointer;
+  background:
+    radial-gradient(120% 140% at 30% 0%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, var(--hud-teal) 0%, #0d3448 55%, var(--hud-navy-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 7px rgba(0, 0, 0, 0.38),
+    0 0 0 2px rgba(6, 26, 40, 0.6),
+    0 4px 9px rgba(0, 0, 0, 0.45);
+  transition: filter 140ms ease, transform 100ms ease, box-shadow 100ms ease;
+  touch-action: manipulation;
+}
+.btn-hud-levels:hover { filter: brightness(1.12); }
+.btn-hud-levels:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -4px 7px rgba(0, 0, 0, 0.38),
+    0 0 0 2px rgba(6, 26, 40, 0.6),
+    0 2px 5px rgba(0, 0, 0, 0.4);
+}
+.btn-hud-levels:focus-visible { outline: 3px solid var(--hud-gold-light); outline-offset: 2px; }
+.hud-levels-ico {
+  display: block;
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, 0.5));
+}
+
 /* Thin lesson-progress strip along the HUD's lower edge. The faint gold
    inner rim keeps the whole track readable even at 0%. */
 .hud-progress-track {
@@ -2121,19 +2166,56 @@ body {
   font-weight: 600;
   color: #cfe0d8;
 }
-.rs-review-list {
+/* One scroll container holds the full statistics + every mistake; the
+   dialog itself never grows past the viewport. */
+.rs-review-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 6px 2px 2px;
+  text-align: left;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233, 182, 77, 0.45) transparent;
+}
+/* Full statistics block: the same rows as the summary, on their own
+   parchment sheet inside the teal dialog. */
+.rs-detail-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-flow: row;
+  grid-template-rows: none;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(93deg, rgba(84, 52, 18, 0.08) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, #fdf3d7 0%, #f0dfb4 100%);
+  border: 3px solid #8a5a2b;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+  color: var(--wood-ink);
+}
+.rs-detail-stats .rs-stat-value.is-score { font-size: 1.18rem; }
+.rs-review-list {
   display: grid;
   grid-template-columns: 1fr;
   align-content: start;
   gap: 10px;
-  padding: 2px 4px 2px 2px;
-  text-align: left;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(233, 182, 77, 0.45) transparent;
+}
+.rs-review-list-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffd88a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .rs-review-dialog .rs-btn-gold { align-self: center; min-width: min(100%, 220px); }
 
@@ -2614,41 +2696,119 @@ body {
   .rs-btn { padding-top: 8px; padding-bottom: 8px; }
 }
 
-/* Phones: dedicated compact composition of the same visual identity —
-   single-column stats, one or two mistake previews, stacked actions. */
+/* Phones: dedicated compact composition of the same visual identity.
+   The whole summary fits the viewport: banner + stars + short message,
+   a 2×2 grid of the four ESSENTIAL stat tiles (the other five live in
+   Session Details), ONE mistake preview without the explanation
+   paragraph, and a gold primary above a Level Map + Details pair. */
 @media (max-width: 719px) {
   .rs-card { width: 100%; border-radius: 22px; }
-  .rs-frame { padding: 12px 10px 11px; border-radius: 17px; gap: 9px; }
-  .rs-banner-plank { padding: 8px 14px; }
+  .rs-frame { padding: 11px 9px 10px; border-radius: 17px; gap: 8px; }
+  .rs-banner-ropes { height: 8px; width: clamp(70px, 16vw, 110px); }
+  .rs-banner-plank { padding: 7px 12px; border-radius: 12px; }
+  #rs-title { font-size: clamp(1.18rem, 5.4vw, 1.42rem); }
   .rs-orn { width: 13px; height: 13px; }
-  .rs-star { width: clamp(44px, 11.5vw, 58px); }
-  .rs-parchment { padding: 10px 12px; }
-  /* One statistics column; labels wrap rather than truncate. */
+  .rs-star { width: clamp(42px, 11vw, 56px); }
+  .rs-subtitle {
+    font-size: 0.92rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* "Level Summary" is a redundant subtitle on the compact card. */
+  .rs-parch-head { display: none; }
+  .rs-parchment { padding: 9px 10px; }
+  /* 2×2 essential tiles: icon over big value over small label, each on a
+     cream inset surface. Secondary stats stay in the DOM for Session
+     Details but never consume summary height. */
   .rs-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-auto-flow: row;
     grid-template-rows: none;
-    row-gap: 5px;
+    gap: 7px;
   }
-  .rs-stat-label { white-space: normal; overflow-wrap: anywhere; }
-  /* One or two mistake previews on phones — the full-review overlay
-     keeps every remaining mistake accessible. */
-  .rs-review-grid { grid-template-columns: 1fr; }
-  .rs-review-grid .rs-mistake:nth-child(3) { display: none; }
-  .rs-mistake-why.is-clamped { -webkit-line-clamp: 3; }
-  .rs-btn-review { width: 100%; }
-  /* Stacked full-width actions with comfortable touch targets. */
-  .rs-actions { flex-direction: column; align-items: stretch; }
-  .rs-btn { min-width: 0; width: 100%; padding: 13px 16px; }
+  .rs-stats .rs-stat:not(.is-essential) { display: none; }
+  .rs-stat {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 6px 7px;
+    border-radius: 11px;
+    background: linear-gradient(180deg, rgba(255, 252, 240, 0.85) 0%, rgba(238, 219, 172, 0.85) 100%);
+    border: 2px solid rgba(138, 90, 43, 0.55);
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.5),
+      0 2px 5px rgba(0, 0, 0, 0.22);
+  }
+  .rs-stat-ico { order: 1; width: clamp(20px, 5.2vw, 24px); }
+  .rs-stat-value { order: 2; margin: 0; font-size: clamp(1.22rem, 5.8vw, 1.5rem); }
+  .rs-stat-value.is-score { font-size: clamp(1.3rem, 6.2vw, 1.6rem); }
+  .rs-stat-label {
+    order: 3;
+    flex: none;
+    text-align: center;
+    font-size: 0.72rem;
+    line-height: 1.15;
+  }
+  /* One mistake preview, no explanation paragraph on the summary. */
+  .rs-review { gap: 5px; }
+  .rs-review-title { font-size: 0.84rem; gap: 8px; }
+  .rs-review-sub { display: none; }
+  .rs-review-grid { grid-template-columns: 1fr; gap: 7px; }
+  .rs-review-grid .rs-mistake:not(:first-child) { display: none; }
+  .rs-mistake { padding: 7px 10px; gap: 3px; }
+  .rs-mistake-why { display: none; }
+  .rs-mistake-q { font-size: 0.9rem; }
+  .rs-mistake-line { font-size: 0.78rem; }
+  .rs-btn-review { width: 100%; padding: 7px 14px; font-size: 0.8rem; }
+  /* Action grid: full-width gold primary on top, teal pair beneath. */
+  .rs-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    padding-top: 0;
+  }
+  .rs-btn { min-width: 0; width: 100%; padding: 11px 8px; font-size: 0.95rem; }
+  .rs-btn-gold {
+    grid-column: 1 / -1;
+    order: -1;
+    padding: 13px 16px;
+    font-size: 1.04rem;
+  }
+}
+
+/* Short phones (e.g. 320×640, 375×667): shrink decoration before text. */
+@media (max-width: 719px) and (max-height: 700px) {
+  .rs-banner-ropes { display: none; }
+  .rs-frame { gap: 6px; padding: 9px 8px 9px; }
+  .rs-star { width: clamp(36px, 9vw, 46px); }
+  .rs-subtitle { font-size: 0.86rem; }
+  .rs-parchment { padding: 7px 8px; }
+  .rs-stats { gap: 6px; }
+  .rs-stat { padding: 6px 4px 5px; }
+  .rs-stat-value { font-size: 1.16rem; }
+  .rs-stat-value.is-score { font-size: 1.24rem; }
+  .rs-btn { padding: 9px 8px; }
+  .rs-btn-gold { padding: 11px 12px; }
+}
+
+/* Very short viewports: the mistake preview gives way — result, stars,
+   essential tiles and the primary action always stay visible. */
+@media (max-width: 719px) and (max-height: 580px) {
+  .rs-review { display: none; }
+  .rs-stars { margin-top: 0; }
 }
 
 /* Very narrow phones (down to 320px). */
 @media (max-width: 360px) {
-  .rs-frame { padding: 10px 7px 9px; gap: 7px; }
+  .rs-frame { padding: 8px 6px 8px; gap: 6px; }
   .rs-banner-plank { gap: 7px; border-radius: 11px; }
-  .rs-stat { gap: 6px; }
+  .rs-stat-label { font-size: 0.68rem; }
   .rs-stat-ico { width: 19px; }
-  .rs-review-grid { gap: 7px; }
+  .rs-stats { gap: 6px; }
 }
 
 /* Loading / error screens */
@@ -2661,7 +2821,109 @@ body {
      stay readable before any level data has arrived. */
   background: radial-gradient(120% 90% at 50% 50%, rgba(10, 14, 24, 0.38) 0%, rgba(10, 14, 24, 0.14) 100%);
 }
-.loading-note { font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+
+/* Preloader stage: signboard logo + animated fruit + real progress bar.
+   The bar width and the percentage come from js/game.js using ACTUAL
+   asset/level load state — nothing here simulates progress, and the
+   animations are transform/opacity only so the loader itself stays
+   cheap on mobile GPUs. */
+.loader-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(86vw, 360px);
+  padding: 10px 8px;
+}
+.loader-fruit {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  isolation: isolate; /* keeps the glow behind the fruit */
+}
+.loader-fruit::before {
+  /* soft pulsing golden glow behind the melon (opacity only) */
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.35) 0%, rgba(255, 209, 102, 0) 65%);
+  animation: loader-glow 1.6s ease-in-out infinite;
+  z-index: -1;
+}
+.loader-fruit img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.45));
+  animation: loader-bounce 1.6s ease-in-out infinite;
+}
+@keyframes loader-bounce {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-9px) rotate(4deg); }
+}
+@keyframes loader-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.loader-note {
+  font-weight: 800;
+  color: #f6ecd8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+/* Wooden-framed dark-teal track with a glossy gold fill. */
+.loader-bar {
+  width: 100%;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #10202e 0%, #0a1622 100%);
+  border: 3px solid var(--wood-2);
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.55),
+    0 4px 10px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.loader-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--gold-1) 0%, #ffcf49 45%, var(--gold-2) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 4px rgba(150, 70, 0, 0.45);
+  transition: width 0.25s ease-out; /* smooths between REAL updates only */
+}
+.loader-percent {
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--hud-gold-light);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+/* Phones: everything still centered, just a touch smaller. */
+@media (max-width: 719px) {
+  .loader-stage { gap: 11px; }
+  .loader-fruit { width: 92px; height: 92px; }
+  .loader-bar { height: 19px; }
+}
+/* Short landscape phones: reclaim vertical space. */
+@media (max-height: 520px) {
+  .loader-stage { gap: 8px; padding: 4px 8px; }
+  .loader-fruit { width: 72px; height: 72px; }
+  .loader-fruit::before { inset: -12%; }
+  .loader-bar { height: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader-fruit img { animation: none; }
+  .loader-fruit::before { animation: none; opacity: 0.8; }
+  .loader-bar-fill { transition: none; }
+}
 
 /* ---------------------------------------------------------------- */
 /* Responsive behavior                                                */
@@ -2688,6 +2950,8 @@ body {
   .hud-hearts .heart { width: 24px; }
   .btn-pause { width: 44px; height: 44px; }
   .hud-pause-bars { width: 16px; height: 16px; }
+  .btn-hud-levels { width: 44px; height: 44px; }
+  .hud-levels-ico { width: 20px; height: 20px; }
   .hud-progress-track { left: 10px; right: 10px; }
   .hud-leaf { width: 20px; height: 23px; }
   .hud-leaf-l { left: -7px; }
@@ -2743,6 +3007,8 @@ body {
   .hud-level-num { width: 36px; height: 36px; font-size: 0.98rem; }
   .btn-pause { width: 38px; height: 38px; }
   .hud-pause-bars { width: 14px; height: 14px; }
+  .btn-hud-levels { width: 38px; height: 38px; }
+  .hud-levels-ico { width: 17px; height: 17px; }
   .hud-hearts .heart { width: 20px; }
   .hud-chip { padding: 4px 9px; font-size: 0.8rem; }
   .hud-round { font-size: 0.86rem; }
@@ -2796,6 +3062,8 @@ body {
   .hud-hearts .heart { width: 22px; }
   .btn-pause { width: 43px; height: 43px; }
   .hud-pause-bars { width: 15px; height: 15px; }
+  .btn-hud-levels { width: 43px; height: 43px; }
+  .hud-levels-ico { width: 19px; height: 19px; }
   .banner-hang { padding-top: 10px; }
   .banner-rope { height: 14px; }
   .rope-l { left: 10%; }
@@ -2831,6 +3099,8 @@ body {
   .hud-hearts .heart { width: 20px; }
   .btn-pause { width: 41px; height: 41px; }
   .hud-pause-bars { width: 14px; height: 14px; }
+  .btn-hud-levels { width: 41px; height: 41px; }
+  .hud-levels-ico { width: 18px; height: 18px; }
   .hud-progress-track { left: 7px; right: 7px; }
   .hud-leaf { width: 16px; height: 19px; }
   .hud-leaf-l { left: -5px; }

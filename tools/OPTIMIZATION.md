@@ -23,15 +23,22 @@ user gesture).
 
 ## Regenerating the pipeline
 
-1. `node tools/prep-fruits.mjs` — regenerates the PNG sprites from the
-   original AI-generated downloads (machine-specific paths are listed in
-   the script header; originals are never modified).
-2. Serve the project (`npm start`) and open
-   `http://localhost:3000/tools/convert-images-to-webp.html` — downloads the
-   WebP versions produced with the same dimensions and quality settings.
-3. Replace the `.webp` files under `assets/fruits/sprites/` and
-   `assets/ui/question-card.webp`, then delete the superseded `.png` files.
+The current fruit pack (October 2026) replaced the first-generation set: 30
+game-ready 256×256 RGBA PNGs under `assets/fruits/uncuted/` + `cuted/` are
+served directly (~1.4 MB, decoded once at startup via `img.decode()`), so
+the old prep/webp chain is no longer required for fruits.
 
-`tools/build-fruit-sprites.mjs` predates `prep-fruits.mjs` and expects source
-packs under `assets/fruits/uncuted` + `assets/fruits/cuted`, which no longer
-exist; it is kept only as historical reference.
+1. If a WebP variant is wanted, serve the project (`npm start`) and open
+   `http://localhost:3000/tools/convert-images-to-webp.html` — it encodes
+   the current pack (and the question card) with the browser's canvas
+   encoder.
+2. Replace the `.png` files under `assets/fruits/` and
+   `assets/ui/question-card.webp`, then update the paths in
+   `js/game.js` (`FRUIT_ASSETS`) to match.
+
+`tools/prep-fruits.mjs` mapped the retired first-generation set from
+machine-local downloads that no longer exist; it is kept only as historical
+reference. `tools/build-fruit-sprites.mjs` reads the current pack layout
+(`assets/fruits/uncuted` + `cuted`) and can re-normalize it if a future
+source pack ever needs chroma-keying or trimming.
+

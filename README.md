@@ -121,8 +121,9 @@ the top of the corresponding sections in `js/game.js`.
   stealing, a master compressor, and versioned audio settings in localStorage.
   Missing files, unsupported Web Audio and storage failures degrade to silence —
   never to errors.
-- `css/game.css` — responsive layouts, placeholder fruits (CSS shapes + real text
-  labels), overlays, restrained feedback, reduced-motion support.
+- `css/game.css` — responsive layouts, fruit sprites + upright calibrated
+  word labels, two-piece cut-half animation styles, overlays, restrained
+  feedback, reduced-motion support.
 - `tests/engine.test.js` — 53 tests / 13 suites (see above).
   `tests/audio.test.js` — 23 tests / 3 suites (settings store, manifest integrity,
   manager behavior with an injected fake AudioContext).
@@ -182,20 +183,32 @@ Notable behaviors:
   feedback → results, all without page reloads.
 - Desktop: up to 4 active answer fruits per wave. Mobile (coarse pointer or
   < 640 px): 2 per wave; every option still appears exactly once per round.
-- Mouse and touch slicing via Pointer Events with pointer capture; SVG swipe
-  trail with glow.
+- Mouse and touch slicing via Pointer Events with pointer capture; canvas
+  swipe trail and juice FX layers.
 - Score, streak/multiplier, hearts, question progress, and wave numbering in
   the HUD. Pause overlay (blurred backdrop), tab-hidden auto-pause, safe
   resume, resize recovery.
-- Answer fruits use only body shapes that can carry a readable word
-  (watermelon, apple, orange, blueberry, strawberry, kiwi). Sprites are
-  body-trimmed and scaled from the engine's collision radius; labels stay
-  upright via counter-rotation and auto-shrink for long words (validated to
-  ≤ 12 characters in the data pack). Narrow shapes (banana, pear, pineapple,
-  lemon) are excluded from the answer pool and remain decoration art.
-- Slicing FX: the whole sprite is replaced by two clipped copies of the cut
-  artwork that fly apart along the swipe direction, plus a per-fruit-colored
-  juice burst (9 droplets biased along the blade) and a points popup.
+- Answer fruits use the 10 round-bodied fruits of the current sprite pack
+  (watermelon, apple, orange, tomato, peach, melon, pomegranate, lemon,
+  plum, coconut). Each 256×256 sprite carries transparent padding, so the
+  render box scales from the engine's collision radius divided by the
+  body's canvas fraction (`bodyFrac`, calibrated from
+  `assets/fruits/manifest.json` content bounds) — every visible fruit body
+  spans the same pixel size. Word labels anchor to a per-fruit calibrated
+  point nudged below stems/leaves, stay upright via counter-rotation and
+  auto-shrink for long words (validated to ≤ 12 characters in the data
+  pack).
+- Slicing FX — real two-piece split: when the engine confirms a hit, the
+  whole sprite (word included) disappears and TWO independent DOM pieces
+  take over from the same position/rotation — the fruit's own
+  `<fruit>_left.png` and `<fruit>_right.png` cut halves. Each piece carries
+  its own velocity (the fruit's last motion + a separation impulse along
+  the swipe's perpendicular, damped toward the artwork's vertical cut
+  plane), independent spin (left CCW, right CW), shared time-based gravity
+  and a bounded lifetime with an end fade — all integrated inside the
+  single rAF loop (`stepCutPieces`), frozen while paused, hard-capped at 24
+  live halves. A per-fruit-colored juice splash (canvas layer,
+  `js/juice.js`) and a points popup complete the feedback.
 - Compact question-ready parchment panel (the scenery stays visible behind
   it), compact in-game control bar with only working buttons (Help, Settings
   — no fake locked power-ups in the gameplay HUD).
@@ -220,8 +233,15 @@ Notable behaviors:
   open. Results show earned stars plus mistake review grouped by question.
 - The HUD timer shows the session's elapsed play time (engine simulation
   seconds — it only advances while the round is actually running).
-- `tools/prep-fruits.mjs` regenerates the sprite set from the raw generated
-  PNGs (trims margins, clamps near-opaque alpha, downsamples to ≤ 480 px).
+- `tools/prep-fruits.mjs` is the historical pipeline for the retired
+  first-generation sprite set (it reads machine-local downloads that no
+  longer exist). The current fruit pack under `assets/fruits/` ships
+  game-ready 256×256 RGBA PNGs (10 whole fruits in `uncuted/`, 20 cut
+  halves in `cuted/`, plus `manifest.json` with pixel-exact content bounds
+  used to calibrate rendering); `tools/build-fruit-sprites.mjs` can
+  re-normalize that pack, and `tools/convert-images-to-webp.html` re-encodes
+  it if a WebP variant is ever wanted (the PNGs are used directly — ~1.4 MB
+  total, decoded once at startup).
 
 ## Audio
 

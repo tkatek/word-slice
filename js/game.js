@@ -41,6 +41,7 @@ import {
   RoundIntroScheduler,
   INTRO_STATES,
 } from './round-intro.js';
+import { JuiceFx } from './juice.js';
 import { audioManager } from './audio.js';
 
 /* ------------------------------------------------------------------ */

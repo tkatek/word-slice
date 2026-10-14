@@ -5,19 +5,35 @@
  * engine + UI events to `audioManager.play('<eventName>')` and never
  * creates Audio elements or nodes itself.
  *
- * Design constraints (task 8):
- * - Web Audio API only, one lazily-created AudioContext that is created
- *   and resumed from a real user gesture (browser autoplay policy); the
- *   game continues silently while audio is locked.
+ * Startup lifecycle (the fix for missing first sounds):
+ * - The single AudioContext is created at page load, already suspended.
+ *   `decodeAudioData` is NOT gated by autoplay policy, so the essential
+ *   buffers are fetched and decoded during the round introduction — before
+ *   the first gesture can possibly slice anything.
+ * - `resume()` is only ever called synchronously inside a trusted user
+ *   gesture handler (registered in game.js). Nothing is awaited before it.
+ * - A context the browser itself puts into 'running' (autoplay granted)
+ *   is accepted without a gesture; blocked playback is reported honestly
+ *   through the readiness model so the UI can offer a tap-to-enable pill.
+ * - A bounded first-event handoff (≤ HANDOFF_WINDOW_MS) lets the very
+ *   first cut/throw after activation survive a decode that is still in
+ *   flight; anything older or later is dropped, never replayed.
+ * - If the OS suspends a running context (iOS tab switch, screen lock),
+ *   playback is marked locked again and the next gesture re-resumes it.
+ *
+ * Other design constraints:
  * - Sounds are fetched and decoded once, cached per event, and reused —
- *   no per-slice decoding, no `new Audio()`.
+ *   no per-slice decoding, no `new Audio()`. Every load goes through the
+ *   same deduplicating `loading` map, so warm-up, post-unlock preload and
+ *   first-play triggers can never double-fetch or overwrite valid buffers.
  * - Per-event cooldowns prevent whoosh/hover spam; a voice cap with
  *   priority stealing plus a master compressor prevents clipping and
  *   runaway layering during rapid swipes.
  * - Two buses: 'gameplay' (silenced while the game is paused via
  *   setSuspended) and 'ui' (buttons stay audible on pause screens).
  * - Missing files, unsupported Web Audio and storage failures never
- *   throw: the affected event (or all audio) simply stays silent.
+ *   throw: the affected event (or all audio) simply stays silent and the
+ *   failure is recorded in the readiness diagnostics.
  *
  * Playback timing/deck: pitch + sample variation keeps repeated slices
  * from sounding identical (small, bounded detune per play).
@@ -32,6 +48,8 @@
 /* ------------------------------------------------------------------ */
 
 export const AUDIO_STORAGE_KEY = 'word-slice:v1:audio';
+/** Development-only diagnostics switch (?audiodebug=1 also works). */
+export const AUDIO_DEBUG_KEY = 'word-slice:v1:audio-debug';
 
 /** Moderate default level; persisted per user choice. */
 export const DEFAULT_AUDIO_SETTINGS = Object.freeze({
@@ -224,8 +242,45 @@ export const AUDIO_MANIFEST = Object.freeze({
   },
 });
 
-/** Events preloaded immediately after unlock (heard within seconds). */
-export const ESSENTIAL_EVENTS = Object.freeze(['bladeWhoosh', 'fruitCut', 'correct', 'incorrect', 'buttonClick']);
+/**
+ * Critical sounds, fetched AND decoded at page load (before the first
+ * round can possibly need them): slicing, throwing, blade movement,
+ * answer feedback, the round-intro presentation cues and the UI click.
+ * Rare celebration jingles are preloaded only after playback unlocks.
+ */
+export const ESSENTIAL_EVENTS = Object.freeze([
+  'bladeWhoosh',
+  'fruitCut',
+  'fruitThrow',
+  'correct',
+  'incorrect',
+  'countdownTick',
+  'roundStart',
+  'buttonClick',
+]);
+
+/**
+ * Events eligible for the bounded first-event handoff: the sounds of the
+ * very swipe/wave that activates audio. Each may wait at most
+ * HANDOFF_WINDOW_MS (measured from the gesture) for its decode to finish;
+ * after that the event is honestly skipped. Countdown/feedback never
+ * hand off — a late tick is worse than a missing one.
+ */
+export const HANDOFF_EVENTS = Object.freeze(['bladeWhoosh', 'fruitThrow', 'fruitCut']);
+export const HANDOFF_WINDOW_MS = 220;
+
+/**
+ * Distinct readiness phases. Loading assets, having them decoded and
+ * being ALLOWED to play are separate concerns; a suspended context is
+ * never conflated with a running one.
+ */
+export const AUDIO_PHASES = Object.freeze({
+  UNSUPPORTED: 'unsupported',           // no Web Audio — permanently silent
+  LOADING: 'loading',                   // essential assets still fetching/decoding
+  AWAITING_GESTURE: 'awaiting-gesture', // decoded, but the browser blocks playback
+  ACTIVATING: 'activating',             // resume() issued inside a gesture, pending
+  RUNNING: 'running',                   // context running — playback permitted
+});
 
 export const MAX_VOICES = 14;
 
@@ -262,29 +317,96 @@ export function createAudioManager(deps = {}) {
   const setTimer = deps.setTimer || ((fn, delayMs) => setTimeout(fn, delayMs));
   const clearTimer = deps.clearTimer || ((id) => clearTimeout(id));
 
+  // Development-only console diagnostics (?audiodebug=1 or the storage
+  // key). The ring buffer always records; the flag only adds console
+  // output so production stays quiet.
+  const debugEnabled = (() => {
+    if (!hasWindow) return false;
+    try {
+      return new URLSearchParams(window.location.search).has('audiodebug')
+        || window.localStorage.getItem(AUDIO_DEBUG_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })();
+
   /** @type {AudioContext|null} */
   let ctx = null;
   let masterGain = null;
-  let unlocked = false;        // context actually allowed to make sound
-  let suspended = false;       // gameplay bus blocked (game paused)
-  let supported = true;        // false when Web Audio is unavailable
+  let unlocked = false;          // context confirmed running (playback permitted)
+  let activationPending = false; // resume() issued inside a gesture, unconfirmed
+  let suspended = false;         // gameplay bus blocked (game paused)
+  let supported = true;          // false when Web Audio is unavailable
+  let phase = AUDIO_PHASES.LOADING;
+  let gestureAt = -Infinity;     // timestamp of the last unlock() (always gesture-driven)
   let settings = storage ? readAudioSettings(storage) : { ...DEFAULT_AUDIO_SETTINGS };
 
   /** event -> AudioBuffer[] (successfully decoded variations). */
   const buffers = new Map();
   /** events whose files failed to load/decode — never retried in-session. */
   const unavailable = new Set();
-  /** in-flight loads: event -> Promise (dedupe). */
+  /** in-flight load+decode jobs: event -> Promise (single dedupe point). */
   const loading = new Map();
-  /** warm ArrayBuffers fetched before unlock, event -> ArrayBuffer[]. */
-  const warmBuffers = new Map();
+  /** bounded first-event handoff: event -> { expiresAt }. */
+  const handoff = new Map();
+  /** events that already used (or lost) their handoff — one shot each. */
+  const handoffUsed = new Set();
   const lastPlayedAt = new Map();
   const activeVoices = new Set();
   const sequenceTimers = new Set();
+  const stateListeners = new Set();
+  const diagnostics = [];
 
-  const stats = { played: 0, skippedDisabled: 0, skippedSuspended: 0, skippedCooldown: 0, skippedMissing: 0, droppedVoiceCap: 0, byEvent: {} };
+  const stats = {
+    played: 0, skippedDisabled: 0, skippedLocked: 0, skippedSuspended: 0,
+    skippedCooldown: 0, skippedMissing: 0, droppedVoiceCap: 0,
+    handoffDeferred: 0, handoffPlayed: 0, handoffExpired: 0, byEvent: {},
+  };
 
-  /* ---------------- graph + unlock ---------------- */
+  /* ---------------- diagnostics + readiness ---------------- */
+
+  function diagnose(message, info) {
+    diagnostics.push({ at: now(), message, ...(info !== undefined ? { info } : {}) });
+    if (diagnostics.length > 60) diagnostics.shift();
+    if (debugEnabled) {
+      try { console.info(`[audio] ${message}`, info === undefined ? '' : info); } catch { /* never throw */ }
+    }
+  }
+
+  /** Snapshot of the full readiness model (never a single Boolean). */
+  function getReadiness() {
+    return {
+      supported,
+      phase,
+      unlocked,
+      contextState: ctx ? ctx.state : null,
+      effectsOn: settings.effectsOn,
+      volume: settings.effectsVolume,
+      loadedEvents: buffers.size,
+      essentialReady: ESSENTIAL_EVENTS.filter((e) => buffers.has(e)).length,
+      essentialTotal: ESSENTIAL_EVENTS.length,
+      failedEvents: [...unavailable],
+    };
+  }
+
+  function notify() {
+    for (const listener of stateListeners) {
+      try { listener(getReadiness()); } catch { /* listeners must not break audio */ }
+    }
+  }
+
+  function setPhase(next) {
+    if (phase === next) return;
+    phase = next;
+    diagnose('phase', next);
+    notify();
+  }
+
+  function phaseWhileBlocked() {
+    return loading.size > 0 ? AUDIO_PHASES.LOADING : AUDIO_PHASES.AWAITING_GESTURE;
+  }
+
+  /* ---------------- graph ---------------- */
 
   function ensureGraph() {
     if (ctx || !supported) return;
@@ -295,6 +417,8 @@ export function createAudioManager(deps = {}) {
     }
     if (!ctx) {
       supported = false;
+      setPhase(AUDIO_PHASES.UNSUPPORTED);
+      diagnose('unsupported');
       return;
     }
     try {
@@ -308,104 +432,254 @@ export function createAudioManager(deps = {}) {
       limiter.release.value = 0.12;
       masterGain.connect(limiter);
       limiter.connect(ctx.destination);
+      // Saved settings (mute/volume) apply before any voice can be heard.
       masterGain.gain.value = settings.effectsOn ? settings.effectsVolume : 0;
     } catch {
       supported = false;
       ctx = null;
+      setPhase(AUDIO_PHASES.UNSUPPORTED);
+      diagnose('graph-failed');
+      return;
     }
+    // Optional hook (not on very old Safari): accept a context the browser
+    // grants 'running' on its own (autoplay allowed) and flag OS-level
+    // suspensions of a previously running context.
+    try {
+      ctx.onstatechange = () => {
+        if (!ctx) return;
+        if (ctx.state === 'running') {
+          if (activationPending) confirmRunning('statechange');
+          else acceptIfRunning();
+        } else if (unlocked) {
+          markRelocked(`statechange:${ctx.state}`);
+        }
+      };
+    } catch {
+      /* optional API — gestures remain the primary recovery path */
+    }
+    diagnose('context-created', { state: ctx.state });
   }
 
   /**
-   * Called from real user gestures only (game.js registers the listeners).
-   * Creates/resumes the context and kicks off decoding. Never throws and
-   * never queues rejected promises: if the browser still refuses, the
-   * game simply stays silent until a later gesture succeeds.
+   * Accepts a context the browser itself put into 'running' (autoplay
+   * granted / media engagement threshold). This never calls resume(), so
+   * no autoplay policy is bypassed — it only honors permission already
+   * given, which is exactly the "play the initial sounds normally" case.
+   */
+  function acceptIfRunning() {
+    if (unlocked || !supported || !ctx) return;
+    if (ctx.state === 'running') confirmRunning('autoplay-allowed');
+  }
+
+  function confirmRunning(via) {
+    activationPending = false;
+    const firstTime = !unlocked;
+    unlocked = true;
+    setPhase(AUDIO_PHASES.RUNNING);
+    diagnose('running', { via });
+    if (firstTime) {
+      preloadAll();      // optional sounds only — essentials decoded at load
+      flushHandoff(false);
+    }
+  }
+
+  /** A previously running context got suspended by the OS/browser. */
+  function markRelocked(reason) {
+    unlocked = false;
+    activationPending = false;
+    diagnose('relocked', reason);
+    setPhase(phaseWhileBlocked());
+  }
+
+  /* ---------------- unlock ---------------- */
+
+  /**
+   * Must be called from a real user gesture (game.js registers the trusted
+   * listeners). `ctx.resume()` is invoked synchronously — before any asset
+   * work — so the gesture's user activation is spent on the context
+   * itself. Returns true only when playback is confirmed permitted right
+   * now; a pending async resume returns false and the caller keeps its
+   * gesture listeners armed for the next interaction.
    */
   function unlock() {
     if (!supported) return false;
     ensureGraph();
     if (!ctx) return false;
-    if (ctx.state !== 'running') {
-      let resumePromise = null;
-      try {
-        resumePromise = ctx.resume();
-      } catch {
-        return false;
-      }
-      if (resumePromise && typeof resumePromise.then === 'function') {
-        resumePromise.then(() => {
-          if (ctx && ctx.state === 'running') markUnlocked();
-        }).catch(() => { /* stay silent — retried on the next gesture */ });
-        return ctx.state === 'running' ? (markUnlocked(), true) : false;
-      }
-    }
+    gestureAt = now();
     if (ctx.state === 'running') {
-      markUnlocked();
+      confirmRunning('gesture');
       return true;
     }
+    activationPending = true;
+    setPhase(AUDIO_PHASES.ACTIVATING);
+    diagnose('resume-requested', { contextState: ctx.state });
+    let resumePromise = null;
+    try {
+      resumePromise = ctx.resume();
+    } catch (err) {
+      activationPending = false;
+      setPhase(phaseWhileBlocked());
+      diagnose('resume-threw', String(err));
+      return false;
+    }
+    // Chrome flips the state synchronously inside resume(); accept that
+    // immediately so the same gesture's gameplay sounds are not delayed.
+    if (ctx.state === 'running') {
+      confirmRunning('gesture-sync');
+      return true;
+    }
+    if (resumePromise && typeof resumePromise.then === 'function') {
+      resumePromise.then(() => {
+        if (ctx && ctx.state === 'running') {
+          confirmRunning('gesture-async');
+        } else if (activationPending) {
+          activationPending = false;
+          diagnose('resume-noop', { contextState: ctx ? ctx.state : null });
+          setPhase(phaseWhileBlocked());
+          flushHandoff(true);
+        }
+      }).catch(() => {
+        activationPending = false;
+        diagnose('resume-rejected');
+        setPhase(phaseWhileBlocked());
+        flushHandoff(true); // never replay events whose activation failed
+      });
+      return false; // not confirmed yet — stay armed for the next gesture
+    }
+    // Legacy webkitAudioContext without promise-based resume(): the
+    // onstatechange hook or the next gesture confirms the transition.
     return false;
   }
 
-  function markUnlocked() {
-    if (unlocked) return;
-    unlocked = true;
-    decodeWarmBuffers();
-    preloadAll();
+  /** Cheap check for the always-armed gesture listeners in game.js. */
+  function needsUnlock() {
+    return supported && !unlocked;
+  }
+
+  /** Re-checks the live context state (used on visibility changes). */
+  function checkContext() {
+    if (!supported || !ctx) return;
+    if (ctx.state === 'running') acceptIfRunning();
+    else if (unlocked) markRelocked(`check:${ctx.state}`);
   }
 
   /* ---------------- loading ---------------- */
 
-  /** Fetches (but does not decode) essential files — safe before unlock. */
+  /**
+   * Page-load preparation: creates the (suspended) context and fetches +
+   * decodes the essential sounds. Decoding is not gated by autoplay
+   * policy, so this runs during the round introduction — buffers are
+   * ready before the first slice can happen.
+   */
   function warmup() {
-    for (const event of ESSENTIAL_EVENTS) loadEventFiles(event, true);
+    if (!supported) return;
+    ensureGraph();
+    acceptIfRunning();
+    diagnose('warmup');
+    for (const event of ESSENTIAL_EVENTS) loadEventFiles(event);
   }
 
-  function loadEventFiles(event, warmOnly = false) {
+  /** Single deduplicated load+decode pipeline for every event. */
+  function loadEventFiles(event) {
     const def = AUDIO_MANIFEST[event];
     if (!def) return Promise.resolve([]);
-    if (buffers.has(event) || unavailable.has(event) || warmBuffers.has(event)) return Promise.resolve([]);
-    if (loading.has(event)) return loading.get(event);
+    if (buffers.has(event) || unavailable.has(event) || loading.has(event)) {
+      return loading.get(event) || Promise.resolve([]);
+    }
     const job = Promise.all(def.files.map((path) => fetchFile(path)))
-      .then((arrayBuffers) => {
-        if (warmOnly && !unlocked) {
-          warmBuffers.set(event, arrayBuffers);
-          return [];
-        }
-        return decodeEvent(event, arrayBuffers);
-      })
+      .then((arrayBuffers) => decodeBuffers(event, arrayBuffers))
       .catch(() => {
         unavailable.add(event); // missing audio never breaks the game
+        diagnose('load-failed', event);
         return [];
       })
-      .finally(() => loading.delete(event));
+      .finally(() => {
+        loading.delete(event);
+        if (phase === AUDIO_PHASES.LOADING && loading.size === 0 && !unlocked) {
+          setPhase(AUDIO_PHASES.AWAITING_GESTURE);
+        }
+      });
     loading.set(event, job);
     return job;
   }
 
-  function decodeEvent(event, arrayBuffers) {
+  function decodeBuffers(event, arrayBuffers) {
     if (!ctx || !arrayBuffers.length) return [];
-    const decoded = [];
     return Promise.all(arrayBuffers.map((buf) => {
       // decodeAudioData detaches the ArrayBuffer; clone for determinism tests.
-      const p = ctx.decodeAudioData(buf.slice(0));
-      return p.then((audioBuffer) => decoded.push(audioBuffer)).catch(() => {});
-    })).then(() => {
-      if (decoded.length) buffers.set(event, decoded);
-      else unavailable.add(event);
-      return decoded;
+      return ctx.decodeAudioData(buf.slice(0)).catch(() => null);
+    })).then((decoded) => {
+      const ok = decoded.filter(Boolean);
+      if (ok.length) {
+        buffers.set(event, ok);
+        if (handoff.has(event)) attemptHandoff(event);
+      } else {
+        unavailable.add(event);
+        diagnose('decode-failed', event);
+      }
+      return ok;
     });
   }
 
-  function decodeWarmBuffers() {
-    for (const [event, arrayBuffers] of warmBuffers) {
-      decodeEvent(event, arrayBuffers);
-    }
-    warmBuffers.clear();
-  }
-
+  /** Loads every not-yet-loaded event (called once playback is allowed). */
   function preloadAll() {
     for (const event of Object.keys(AUDIO_MANIFEST)) {
-      if (!buffers.has(event)) loadEventFiles(event);
+      loadEventFiles(event); // dedupe: essentials already decoded at load
+    }
+  }
+
+  /* ---------------- bounded first-event handoff ---------------- */
+
+  function canHandoff(event) {
+    if (!HANDOFF_EVENTS.includes(event)) return false;
+    if (handoff.has(event) || handoffUsed.has(event)) return false;
+    if (!supported || !settings.effectsOn) return false;
+    // Only events arriving inside a real gesture-driven activation window
+    // qualify; pre-gesture events are dropped, never queued for replay.
+    return activationPending || now() - gestureAt <= HANDOFF_WINDOW_MS;
+  }
+
+  function stashHandoff(event) {
+    handoff.set(event, { expiresAt: gestureAt + HANDOFF_WINDOW_MS });
+    stats.handoffDeferred++;
+    diagnose('handoff-deferred', event);
+  }
+
+  /**
+   * Plays one handed-off event once its buffers exist. Consumption is
+   * one-shot: the slot survives only while the decode is genuinely in
+   * flight and the expiry has not passed.
+   */
+  function attemptHandoff(event) {
+    const slot = handoff.get(event);
+    if (!slot) return;
+    if (unavailable.has(event)) {
+      handoff.delete(event);
+      handoffUsed.add(event);
+      stats.handoffExpired++;
+      return;
+    }
+    if (!buffers.has(event)) return; // still decoding — retried on completion
+    handoff.delete(event);
+    handoffUsed.add(event);
+    if (!unlocked || now() > slot.expiresAt) {
+      stats.handoffExpired++;
+      diagnose('handoff-expired', event);
+      return;
+    }
+    if (suspended && AUDIO_MANIFEST[event].bus === 'gameplay') return;
+    if (play(event)) stats.handoffPlayed++;
+  }
+
+  function flushHandoff(expireAll) {
+    for (const event of [...handoff.keys()]) {
+      if (expireAll) {
+        handoff.delete(event);
+        handoffUsed.add(event);
+        stats.handoffExpired++;
+      } else {
+        attemptHandoff(event);
+      }
     }
   }
 
@@ -422,8 +696,22 @@ export function createAudioManager(deps = {}) {
   function play(event) {
     const def = AUDIO_MANIFEST[event];
     if (!def) return false;
+    // A context the browser already permits (autoplay granted) counts as
+    // playable even before any gesture — checked lazily here because the
+    // permission can arrive at any time.
+    acceptIfRunning();
     if (!enabled()) {
+      if (canHandoff(event) && !(suspended && def.bus === 'gameplay')) stashHandoff(event);
       stats.skippedDisabled++;
+      return false;
+    }
+    if (ctx.state !== 'running') {
+      // The OS/browser suspended a previously running context (iOS tab
+      // switch, screen lock). Sounds scheduled now would be silently lost
+      // down an inactive output, so mark the relock; the always-armed
+      // gesture listeners in game.js re-resume on the next interaction.
+      markRelocked(`play:${ctx.state}`);
+      stats.skippedLocked++;
       return false;
     }
     if (suspended && def.bus === 'gameplay') {
@@ -431,7 +719,9 @@ export function createAudioManager(deps = {}) {
       return false;
     }
     if (!buffers.has(event)) {
-      // Not decoded yet (or failed): trigger the load for next time.
+      // Not decoded yet (or failed): start the deduped load so the next
+      // occurrence can play, and let a qualifying first event hand off.
+      if (canHandoff(event) && !(suspended && def.bus === 'gameplay')) stashHandoff(event);
       loadEventFiles(event);
       stats.skippedMissing++;
       return false;
@@ -543,14 +833,16 @@ export function createAudioManager(deps = {}) {
   /**
    * Cancels every pending playSequence item (level-end celebrations that
    * would otherwise keep firing over a session restarted from the results
-   * screen, or after quitting to the map). Already-playing voices finish
-   * naturally (they are under a second long).
+   * screen, or after quitting to the map) plus any bounded first-event
+   * handoff — stale sounds never carry across a restart. Already-playing
+   * voices finish naturally (they are under a second long).
    */
   function cancelSequences() {
     for (const id of sequenceTimers) {
       clearTimer(id);
     }
     sequenceTimers.clear();
+    flushHandoff(true);
   }
 
   function applyMasterGain() {
@@ -562,6 +854,7 @@ export function createAudioManager(deps = {}) {
     settings = { ...settings, effectsOn: !muted };
     applyMasterGain();
     if (storage) writeAudioSettings(storage, settings);
+    notify(); // the tap-to-enable pill must not show for intentional mute
     return !muted;
   }
 
@@ -579,6 +872,9 @@ export function createAudioManager(deps = {}) {
     cancelSequences,
     unlock,
     warmup,
+    needsUnlock,
+    checkContext,
+    onStateChange: (listener) => { stateListeners.add(listener); },
     setSuspended,
     setMuted,
     setEffectsVolume,
@@ -587,7 +883,9 @@ export function createAudioManager(deps = {}) {
     isSupported: () => supported,
     isEffectsOn: () => settings.effectsOn,
     getEffectsVolume: () => settings.effectsVolume,
-    getStats: () => ({ ...stats, activeVoices: activeVoices.size, loadedEvents: buffers.size }),
+    getStats: () => ({ ...stats, phase, activeVoices: activeVoices.size, loadedEvents: buffers.size }),
+    getReadiness,
+    getDiagnostics: () => [...diagnostics],
     /** True when the event's buffers are decoded and playable right now. */
     isReady: (event) => buffers.has(event),
     _getSettings: () => ({ ...settings }),

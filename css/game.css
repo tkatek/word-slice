@@ -1457,6 +1457,43 @@ body {
 }
 .resize-notice[hidden] { display: none; }
 
+/* "The browser is blocking sound" pill — shown only until the first
+   gesture activates audio (js/game.js keeps it in sync with the audio
+   readiness model). Small and quiet on purpose: no modal, no timer, no
+   interruption of the round introduction. */
+.audio-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 15px;
+  background: rgba(16, 24, 16, 0.78);
+  color: #fff8eb;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.audio-hint svg { width: 15px; height: 15px; flex: none; }
+.audio-hint:hover, .audio-hint:active { background: rgba(16, 24, 16, 0.9); }
+.audio-hint[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .audio-hint { animation: audio-hint-pulse 2.6s ease-in-out infinite; }
+}
+@keyframes audio-hint-pulse {
+  0%, 100% { opacity: 0.82; }
+  50%      { opacity: 1; }
+}
+
 /* ---------------------------------------------------------------- */
 /* App-level overlays (menu how-to, settings) + toast                */
 /* ---------------------------------------------------------------- */

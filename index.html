@@ -277,6 +277,20 @@
             <div id="resize-notice" class="resize-notice" hidden>
               Screen size changed — the round will restart in a moment.
             </div>
+
+            <!-- Small, unobtrusive "sound is blocked" affordance. Never a
+                 modal: it never interrupts the round introduction, hides
+                 itself the moment any gesture activates audio, and never
+                 appears for intentional mute/zero volume. -->
+            <button id="btn-audio-hint" class="audio-hint" type="button" hidden
+              aria-label="Enable sound — the browser blocks audio until you tap">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 9v6h4l5 4.2V4.8L8 9H4z" fill="currentColor"/>
+                <path d="M16.4 8.6a4.8 4.8 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M18.9 6.1a8.3 8.3 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span>Tap for sound</span>
+            </button>
           </div>
         </div>
       </div>

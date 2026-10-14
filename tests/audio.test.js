@@ -6,6 +6,10 @@
  * - manager behavior with an injected fake AudioContext: unlock gating,
  *   cooldowns, mute/volume persistence, pause bus blocking, voice-cap
  *   stealing, missing-file resilience and sequenced celebrations.
+ * - startup lifecycle (the missing-first-sounds fix): decode-before-gesture
+ *   warm-up, deduplicated loading, async resume confirmation, autoplay
+ *   grants, relock recovery, bounded first-event handoff and the
+ *   gameplay-event wiring in js/game.js.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,9 +18,12 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   AUDIO_MANIFEST,
+  AUDIO_PHASES,
   AUDIO_STORAGE_KEY,
   DEFAULT_AUDIO_SETTINGS,
   ESSENTIAL_EVENTS,
+  HANDOFF_EVENTS,
+  HANDOFF_WINDOW_MS,
   MAX_VOICES,
   clampVolume,
   createAudioManager,
@@ -93,6 +100,55 @@ function fakeFetch() {
     return Promise.resolve(new ArrayBuffer(16));
   };
 }
+
+/** Context whose resume() only flips state a microtask later (Firefox/Safari). */
+function asyncResumeContext() {
+  const ctx = fakeAudioContext();
+  ctx.resume = function () {
+    return Promise.resolve().then(() => { this.state = 'running'; });
+  };
+  return ctx;
+}
+
+/** Context whose resume() never flips state (blocked autoplay). */
+function noopResumeContext() {
+  const ctx = fakeAudioContext();
+  ctx.resume = () => Promise.resolve();
+  return ctx;
+}
+
+/** Context with manually released decodes, for handoff-window tests. */
+function manualDecodeContext() {
+  const ctx = fakeAudioContext();
+  const pending = [];
+  ctx.decodeAudioData = () => new Promise((resolve) => pending.push(resolve));
+  ctx.flushDecodes = () => { for (const r of pending.splice(0)) r({ duration: 0.2 }); };
+  return ctx;
+}
+
+/** Context that records created gain nodes (master-volume verification). */
+function gainCapturingContext() {
+  const ctx = fakeAudioContext();
+  const gains = [];
+  const originalCreateGain = ctx.createGain;
+  ctx.createGain = () => { const n = originalCreateGain(); gains.push(n); return n; };
+  ctx.gains = gains;
+  return ctx;
+}
+
+/** Fetch that counts every path request (dedupe verification). */
+function countingFetch(counts = new Map()) {
+  return (path) => {
+    counts.set(path, (counts.get(path) || 0) + 1);
+    return Promise.resolve(new ArrayBuffer(8));
+  };
+}
+
+/** Runs several macrotask turns so fetch → decode → finally chains settle. */
+async function settle(turns = 6) {
+  for (let i = 0; i < turns; i++) await new Promise((r) => setTimeout(r, 0));
+}
+
 
 /** Manual clock + timers for cooldown/sequence testing. */
 function fakeClock() {
@@ -498,5 +554,346 @@ describe('audio manager', () => {
       const def = AUDIO_MANIFEST[event];
       for (const file of def.files) assert.ok(fetched.includes(file), `${file} not warmed`);
     }
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Startup lifecycle (the missing-first-sounds fix)                    */
+/* ------------------------------------------------------------------ */
+
+describe('audio startup lifecycle', () => {
+  test('essentials are decoded at warm-up, before any gesture can slice', async () => {
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    assert.equal(manager.getReadiness().phase, AUDIO_PHASES.LOADING);
+    manager.warmup();
+    await settle();
+    for (const event of ['bladeWhoosh', 'fruitCut', 'fruitThrow', 'countdownTick', 'roundStart', 'correct', 'incorrect', 'buttonClick']) {
+      assert.equal(manager.isReady(event), true, `${event} must be decoded before the first gesture`);
+    }
+    const readiness = manager.getReadiness();
+    assert.equal(readiness.phase, AUDIO_PHASES.AWAITING_GESTURE, 'decoded ≠ permitted');
+    assert.equal(readiness.unlocked, false, 'a decoded cache never implies playback permission');
+    assert.equal(readiness.contextState, 'suspended', 'suspended context reported honestly');
+    assert.equal(readiness.essentialReady, readiness.essentialTotal);
+    // Loading finished — the manager still refuses to schedule voices.
+    assert.equal(manager.play('fruitCut'), false);
+  });
+
+  test('loading is deduplicated across warm-up, plays and unlock (no double fetch)', async () => {
+    const counts = new Map();
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({
+      createContext: () => ctx,
+      fetchFile: countingFetch(counts),
+    }));
+    manager.warmup();
+    manager.warmup(); // second init request
+    assert.equal(manager.play('fruitCut'), false); // triggers the load path too
+    await settle();
+    manager.unlock();
+    await settle();
+    const essentialFiles = ESSENTIAL_EVENTS.flatMap((e) => AUDIO_MANIFEST[e].files);
+    for (const path of essentialFiles) {
+      assert.equal(counts.get(path), 1, `${path} fetched exactly once`);
+    }
+    const totalFiles = Object.values(AUDIO_MANIFEST).reduce((sum, def) => sum + def.files.length, 0);
+    const fetchedTotal = [...counts.values()].reduce((a, b) => a + b, 0);
+    assert.equal(fetchedTotal, totalFiles, 'each manifest file fetched exactly once overall');
+  });
+
+  test('unlock issues exactly one resume() inside the gesture (sync flip)', () => {
+    const ctx = fakeAudioContext();
+    let resumeCalls = 0;
+    const originalResume = ctx.resume;
+    ctx.resume = function () { resumeCalls++; return originalResume.call(this); };
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    assert.equal(manager.unlock(), true);
+    assert.equal(resumeCalls, 1, 'user activation spends one resume() per unlock attempt');
+  });
+
+  test('a context that stays suspended after resume is never reported running', async () => {
+    const ctx = noopResumeContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    assert.equal(manager.unlock(), false);
+    await settle();
+    assert.equal(manager.isUnlocked(), false);
+    assert.equal(manager.getReadiness().phase, AUDIO_PHASES.AWAITING_GESTURE);
+    assert.equal(manager.play('fruitCut'), false, 'no voices on a suspended context');
+    assert.equal(manager.needsUnlock(), true, 'gesture listeners must stay armed');
+  });
+
+  test('a rejected resume is retried safely on the next gesture', async () => {
+    const ctx = fakeAudioContext();
+    let failNext = true;
+    ctx.resume = function () {
+      if (failNext) return Promise.reject(new Error('not allowed'));
+      this.state = 'running';
+      return Promise.resolve();
+    };
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.warmup();
+    await settle();
+    assert.equal(manager.unlock(), false); // rejected — swallowed
+    await settle();
+    assert.equal(manager.isUnlocked(), false);
+    failNext = false;
+    assert.equal(manager.unlock(), true);
+    assert.equal(manager.isUnlocked(), true);
+  });
+
+  test('an asynchronously confirmed resume unlocks and plays (Firefox path)', async () => {
+    const ctx = asyncResumeContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.warmup();
+    await settle();
+    assert.equal(manager.unlock(), false, 'sync check cannot confirm yet');
+    assert.equal(manager.getReadiness().phase, AUDIO_PHASES.ACTIVATING);
+    await settle();
+    assert.equal(manager.isUnlocked(), true, 'the resume promise confirms the unlock');
+    await settle(); // post-unlock preload settles
+    assert.equal(manager.play('fruitCut'), true);
+  });
+
+  test('a browser-granted running context is accepted without any gesture', async () => {
+    const ctx = fakeAudioContext();
+    ctx.state = 'running'; // autoplay allowed (e.g. media engagement)
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.warmup();
+    await settle();
+    assert.equal(manager.isUnlocked(), true);
+    assert.equal(manager.play('fruitCut'), true, 'initial sounds play normally when permitted');
+  });
+
+  test('first cut within the handoff window plays once its decode lands', async () => {
+    const clock = fakeClock();
+    const ctx = manualDecodeContext();
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+    }));
+    manager.warmup();
+    assert.equal(manager.unlock(), true); // sync flip; decodes still pending
+    // The very first cut of the unlocking gesture races the decode…
+    assert.equal(manager.play('fruitCut'), false);
+    assert.equal(manager.getStats().handoffDeferred, 1, 'bounded handoff armed');
+    ctx.flushDecodes(); // decode completes inside the 220 ms window
+    await settle();
+    assert.equal(manager.getStats().handoffPlayed, 1);
+    assert.equal(manager.getStats().byEvent.fruitCut, 1, 'the first cut is audible');
+  });
+
+  test('handoff expires instead of playing seconds late', async () => {
+    const clock = fakeClock();
+    const ctx = manualDecodeContext();
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+    }));
+    manager.warmup();
+    assert.equal(manager.unlock(), true);
+    assert.equal(manager.play('fruitCut'), false);
+    clock.advance(HANDOFF_WINDOW_MS + 80); // activation window closed
+    ctx.flushDecodes();
+    await settle();
+    assert.equal(manager.getStats().handoffPlayed, 0, 'an expired event is honestly skipped');
+    assert.equal(manager.getStats().handoffExpired, 1);
+    assert.equal(manager.getStats().byEvent.fruitCut, undefined);
+  });
+
+  test('only gesture-window events hand off — pre-permission sounds are never replayed', async () => {
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    assert.equal(manager.play('fruitCut'), false); // before any gesture
+    assert.equal(manager.play('roundIntro'), false);
+    assert.equal(manager.getStats().handoffDeferred, 0, 'no backlog is built while blocked');
+    manager.unlock();
+    await settle();
+    assert.deepEqual(manager.getStats().byEvent, {}, 'old events are not replayed after activation');
+  });
+
+  test('restarts clear any pending handoff (no stale carry-over)', async () => {
+    const clock = fakeClock();
+    const ctx = manualDecodeContext();
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+    }));
+    manager.warmup();
+    manager.unlock();
+    assert.equal(manager.play('fruitCut'), false);
+    manager.cancelSequences(); // what startGame/quitToLevels call on restart
+    ctx.flushDecodes();
+    await settle();
+    assert.equal(manager.getStats().handoffPlayed, 0);
+    assert.equal(manager.getStats().byEvent.fruitCut, undefined);
+  });
+
+  test('handoff is one-shot per event and limited to the swipe sounds', async () => {
+    const clock = fakeClock();
+    const ctx = manualDecodeContext();
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+    }));
+    manager.warmup();
+    manager.unlock();
+    assert.equal(manager.play('fruitCut'), false);
+    clock.advance(50);
+    assert.equal(manager.play('fruitCut'), false); // still decoding
+    assert.equal(manager.getStats().handoffDeferred, 1, 'slot reused, not duplicated');
+    ctx.flushDecodes();
+    await settle();
+    assert.equal(manager.getStats().handoffPlayed, 1);
+    for (const event of HANDOFF_EVENTS) {
+      assert.ok(['bladeWhoosh', 'fruitThrow', 'fruitCut'].includes(event));
+    }
+    assert.ok(HANDOFF_WINDOW_MS >= 150 && HANDOFF_WINDOW_MS <= 250, 'window must stay in the 150–250 ms band');
+  });
+
+  test('an OS suspension after running relocks playback and the next gesture recovers', async () => {
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.warmup();
+    await settle();
+    assert.equal(manager.unlock(), true);
+    ctx.state = 'suspended'; // iOS interruption / screen lock while hidden
+    assert.equal(manager.play('fruitCut'), false);
+    assert.equal(manager.getStats().skippedLocked, 1);
+    assert.equal(manager.isUnlocked(), false, 'suspended is not running');
+    assert.equal(manager.needsUnlock(), true, 'armed listeners recover on the next gesture');
+    assert.equal(manager.unlock(), true);
+    await settle();
+    assert.equal(manager.play('fruitCut'), true, 'audio fully recovers');
+  });
+
+  test('exactly one AudioContext exists across warm-up, unlock and relocks', async () => {
+    let created = 0;
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({
+      createContext: () => { created++; return ctx; },
+    }));
+    manager.warmup();
+    manager.unlock();
+    await settle();
+    ctx.state = 'suspended'; // force a relock
+    manager.play('fruitCut');
+    manager.unlock(); // recovery reuses the same context
+    await settle();
+    assert.equal(created, 1, 'no duplicate AudioContexts');
+    assert.equal(manager.unlock(), true);
+  });
+
+  test('saved volume is applied to the master gain before the first voice', async () => {
+    const ctx = gainCapturingContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.setEffectsVolume(0.3); // settings land before the graph exists
+    manager.warmup();
+    assert.equal(ctx.gains.length >= 1, true);
+    assert.equal(ctx.gains[0].gain.value, 0.3, 'master gain initialized from persisted settings');
+    manager.unlock();
+    await settle();
+    assert.equal(manager.play('fruitCut'), true);
+    assert.equal(ctx.gains[0].gain.value, 0.3, 'still 0.3 when the first voice plays');
+  });
+
+  test('a missing essential file never blocks gameplay and is reported', async () => {
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({
+      createContext: () => ctx,
+      fetchFile: (path) => (path.includes('fruit-cut')
+        ? Promise.reject(new Error('404'))
+        : Promise.resolve(new ArrayBuffer(8))),
+    }));
+    manager.warmup();
+    await settle();
+    manager.unlock();
+    await settle();
+    assert.equal(manager.play('fruitCut'), false);
+    assert.equal(manager.play('correct'), true, 'every other sound keeps working');
+    const readiness = manager.getReadiness();
+    assert.deepEqual(readiness.failedEvents, ['fruitCut'], 'failure surfaced in diagnostics');
+  });
+
+  test('readiness listeners observe the phase transitions', async () => {
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    const phases = [];
+    manager.onStateChange((r) => phases.push(r.phase));
+    manager.warmup();
+    await settle();
+    manager.unlock();
+    await settle();
+    assert.ok(phases.includes(AUDIO_PHASES.AWAITING_GESTURE), `saw awaiting-gesture in ${phases}`);
+    assert.ok(phases.includes(AUDIO_PHASES.RUNNING), `saw running in ${phases}`);
+  });
+
+  test('rapid restarts keep working without duplicate listeners or sequences', async () => {
+    const clock = fakeClock();
+    const ctx = fakeAudioContext();
+    const manager = createAudioManager(baseDeps({
+      now: clock.now,
+      createContext: () => ctx,
+      setTimer: clock.setTimer,
+      clearTimer: clock.clearTimer,
+    }));
+    manager.warmup();
+    await settle();
+    manager.unlock();
+    await settle();
+    for (let i = 0; i < 5; i++) {
+      manager.cancelSequences();
+      manager.setSuspended(false);
+      clock.advance(1000);
+      assert.equal(manager.play('fruitCut'), true, `restart ${i}: cut sound plays`);
+    }
+    assert.equal(manager.getStats().byEvent.fruitCut, 5);
+    assert.equal(clock.pending(), 0);
+  });
+
+  test('diagnostics record the startup milestones without throwing', async () => {
+    const ctx = noopResumeContext();
+    const manager = createAudioManager(baseDeps({ createContext: () => ctx }));
+    manager.warmup();
+    await settle();
+    manager.unlock();
+    await settle();
+    const log = manager.getDiagnostics();
+    const messages = log.map((d) => d.message);
+    assert.ok(messages.includes('context-created'));
+    assert.ok(messages.includes('warmup'));
+    assert.ok(messages.includes('resume-requested'));
+    assert.ok(log.every((d) => typeof d.at === 'number'));
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Gameplay wiring (js/game.js keeps events mapped to engine truth)    */
+/* ------------------------------------------------------------------ */
+
+describe('gameplay audio wiring', () => {
+  const gameSource = readFileSync(join(ROOT, 'js/game.js'), 'utf8');
+
+  test("the cut sound stays mapped to the engine's collision events", () => {
+    const correctSlice = gameSource.match(/case 'correctSlice':[\s\S]{0,700}/);
+    const wrongSlice = gameSource.match(/case 'wrongSlice':[\s\S]{0,700}/);
+    assert.ok(correctSlice, 'correctSlice handler exists');
+    assert.ok(wrongSlice, 'wrongSlice handler exists');
+    assert.ok(correctSlice[0].includes("audioManager.play('fruitCut')"), 'correct slice cuts audibly');
+    assert.ok(wrongSlice[0].includes("audioManager.play('fruitCut')"), 'wrong slice cuts audibly too');
+  });
+
+  test("the throw sound stays mapped to the engine's spawn event", () => {
+    const spawn = gameSource.match(/case 'fruitSpawned':[\s\S]{0,500}/);
+    assert.ok(spawn, 'fruitSpawned handler exists');
+    assert.ok(spawn[0].includes("audioManager.play('fruitThrow')"), 'launches throw audibly');
+  });
+
+  test('unlock listeners are gesture events armed before gameplay input', () => {
+    assert.ok(gameSource.includes("window.addEventListener('pointerdown', tryUnlockFromGesture"));
+    assert.ok(gameSource.includes("window.addEventListener('touchend', tryUnlockFromGesture"));
+    assert.ok(gameSource.includes("window.addEventListener('keydown', tryUnlockFromGesture"));
+    // Captured on window so audio resumes before the swipe reaches the field.
+    assert.ok(gameSource.includes("{ capture: true, passive: true }"));
   });
 });

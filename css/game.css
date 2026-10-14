@@ -2780,19 +2780,39 @@ body {
   }
 }
 
-/* Short phones (e.g. 320×640, 375×667): shrink decoration before text. */
+/* Short phones (e.g. 375×667): shrink decoration before text. */
 @media (max-width: 719px) and (max-height: 700px) {
   .rs-banner-ropes { display: none; }
-  .rs-frame { gap: 6px; padding: 9px 8px 9px; }
-  .rs-star { width: clamp(36px, 9vw, 46px); }
-  .rs-subtitle { font-size: 0.86rem; }
-  .rs-parchment { padding: 7px 8px; }
-  .rs-stats { gap: 6px; }
-  .rs-stat { padding: 6px 4px 5px; }
-  .rs-stat-value { font-size: 1.16rem; }
-  .rs-stat-value.is-score { font-size: 1.24rem; }
-  .rs-btn { padding: 9px 8px; }
-  .rs-btn-gold { padding: 11px 12px; }
+  .rs-frame { gap: 5px; padding: 8px 7px 8px; }
+  .rs-star { width: clamp(34px, 8.5vw, 44px); }
+  .rs-subtitle { font-size: 0.82rem; }
+  .rs-parchment { padding: 6px 7px; }
+  .rs-stats { gap: 5px; }
+  .rs-stat { padding: 5px 3px 4px; }
+  .rs-stat-value { font-size: 1.1rem; }
+  .rs-stat-value.is-score { font-size: 1.18rem; }
+  .rs-mistake { padding: 6px 9px; }
+  .rs-review-title { font-size: 0.78rem; }
+  .rs-btn { padding: 8px 6px; }
+  .rs-btn-gold { padding: 10px 10px; }
+}
+
+/* Compact phones (e.g. 320×640): every remaining slice of height counts;
+   text stays readable, only chrome shrinks further. */
+@media (max-width: 719px) and (max-height: 660px) {
+  #rs-title { font-size: 1.06rem; }
+  .rs-banner-plank { padding: 6px 10px; }
+  .rs-star { width: 32px; }
+  .rs-stats { gap: 4px; }
+  .rs-stat { padding: 4px 3px 4px; }
+  .rs-stat-value { font-size: 1.04rem; }
+  .rs-stat-value.is-score { font-size: 1.12rem; }
+  .rs-stat-label { font-size: 0.66rem; }
+  .rs-mistake-q { font-size: 0.84rem; }
+  .rs-mistake-line { font-size: 0.74rem; }
+  .rs-actions { gap: 6px; }
+  .rs-btn { padding: 7px 5px; font-size: 0.9rem; }
+  .rs-btn-gold { padding: 9px 10px; font-size: 0.98rem; }
 }
 
 /* Very short viewports: the mistake preview gives way — result, stars,

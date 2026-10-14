@@ -123,6 +123,7 @@ const els = {
   questionWave: $('question-wave'),
   playfield: $('playfield'),
   fruitsLayer: $('fruits-layer'),
+  fxCanvas: $('fx'),
   trailCanvas: $('trail'),
   resizeNotice: $('resize-notice'),
   btnAudioHint: $('btn-audio-hint'),
@@ -1121,7 +1122,6 @@ const deathDetails = new Map();
 /** [{el, until}] DOM cleanup list processed each frame (no timers). */
 let dyingFruits = [];
 let floatNotes = [];
-let juiceBursts = [];
 /**
  * Live cut-half fragments: {el, x, y, vx, vy, rotation, spin, age, lifetime,
  * w, h}. Two per sliced fruit, each with independent motion, integrated by
@@ -1140,6 +1140,10 @@ let blades = [];
 let bladeSparks = [];
 /** Last swipe segment direction (unit vector) for slice FX bias. */
 let lastSliceDir = { x: 1, y: 0 };
+/** Recent swipe speed (px/ms) and the timestamp of the last pointer move —
+ *  a fast slash scales the juice up (bounded inside js/juice.js). */
+let lastSliceSpeed = 0;
+let lastMoveAt = 0;
 
 /**
  * Each fruit canvas carries transparent padding around the body, so the

@@ -39,7 +39,7 @@ function measure(playW, playH, maxActive, tuning) {
       if (!fruits.has(f.id)) fruits.set(f.id, { tFullyIn: null, tGone: null, radius: f.radius });
       const rec = fruits.get(f.id);
       if (rec.tFullyIn === null && f.y + f.radius <= playH) rec.tFullyIn = t;
-      if (rec.tGone === null && f.y - f.radius >= playH) rec.tGone = t;
+      if (rec.tGone === null && rec.tFullyIn !== null && f.y - f.radius >= playH) rec.tGone = t;
     }
     e.update(step);
     if (e.state !== ENGINE_STATES.PLAYING) break;

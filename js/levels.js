@@ -79,20 +79,30 @@ export function stageById(stageId) {
  * Per-level difficulty as multipliers over the engine's base tuning.
  * The English challenge is the primary difficulty; movement changes stay
  * modest and never shrink fruit targets.
+ *
+ * flightScale multiplies TUNING.FLIGHT_SECONDS, which the engine treats as
+ * the TARGET FULLY-VISIBLE seconds per fruit (the readable window inside
+ * the playfield). The resulting visible-duration bands:
+ *   levels 1–4  (A1): 6–7 s   → scales 1.16–1.22 (≈6.4–6.7 s)
+ *   levels 5–8  (A2): 5–6 s   → scales 0.98–1.04 (≈5.4–5.7 s)
+ *   levels 9–12 (B1): 4.5–5.5 s → scales 0.87–0.95 (≈4.8–5.2 s)
+ * With FLIGHT_JITTER_RATIO ≤ 0.04 every jittered flight stays inside its
+ * band. To retune reading time, change TUNING.FLIGHT_SECONDS (js/engine.js)
+ * or these scales — the engine derives launch velocity and gravity itself.
  */
 export const DIFFICULTY = Object.freeze({
-  'level-01': { flightScale: 1.30, waveGapScale: 1.35, staggerScale: 1.50 },
-  'level-02': { flightScale: 1.25, waveGapScale: 1.30, staggerScale: 1.40 },
-  'level-03': { flightScale: 1.20, waveGapScale: 1.20, staggerScale: 1.30 },
-  'level-04': { flightScale: 1.15, waveGapScale: 1.15, staggerScale: 1.20 },
-  'level-05': { flightScale: 1.10, waveGapScale: 1.10, staggerScale: 1.10 },
-  'level-06': { flightScale: 1.08, waveGapScale: 1.08, staggerScale: 1.05 },
-  'level-07': { flightScale: 1.05, waveGapScale: 1.05, staggerScale: 1.00 },
-  'level-08': { flightScale: 1.02, waveGapScale: 1.02, staggerScale: 1.00 },
-  'level-09': { flightScale: 1.00, waveGapScale: 1.00, staggerScale: 0.95 },
-  'level-10': { flightScale: 0.97, waveGapScale: 0.95, staggerScale: 0.92 },
-  'level-11': { flightScale: 0.95, waveGapScale: 0.92, staggerScale: 0.90 },
-  'level-12': { flightScale: 0.92, waveGapScale: 0.90, staggerScale: 0.88 },
+  'level-01': { flightScale: 1.22, waveGapScale: 1.35, staggerScale: 1.50 },
+  'level-02': { flightScale: 1.20, waveGapScale: 1.30, staggerScale: 1.40 },
+  'level-03': { flightScale: 1.18, waveGapScale: 1.20, staggerScale: 1.30 },
+  'level-04': { flightScale: 1.16, waveGapScale: 1.15, staggerScale: 1.20 },
+  'level-05': { flightScale: 1.04, waveGapScale: 1.10, staggerScale: 1.10 },
+  'level-06': { flightScale: 1.02, waveGapScale: 1.08, staggerScale: 1.05 },
+  'level-07': { flightScale: 1.00, waveGapScale: 1.05, staggerScale: 1.00 },
+  'level-08': { flightScale: 0.98, waveGapScale: 1.02, staggerScale: 1.00 },
+  'level-09': { flightScale: 0.95, waveGapScale: 1.00, staggerScale: 0.95 },
+  'level-10': { flightScale: 0.92, waveGapScale: 0.95, staggerScale: 0.92 },
+  'level-11': { flightScale: 0.89, waveGapScale: 0.92, staggerScale: 0.90 },
+  'level-12': { flightScale: 0.87, waveGapScale: 0.90, staggerScale: 0.88 },
 });
 
 /** Converts a level's difficulty profile into engine tuning overrides. */

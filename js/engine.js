@@ -69,8 +69,14 @@ export const TUNING = Object.freeze({
   SPAWN_STAGGER: 0.12,          // seconds between fruits inside one wave
 
   // Fruit motion (all derived from playfield size at spawn time).
-  FLIGHT_SECONDS: 3.4,          // target useful visibility per fruit
-  FLIGHT_JITTER_RATIO: 0.08,    // ± fraction of FLIGHT_SECONDS
+  // FLIGHT_SECONDS is the TARGET FULLY-VISIBLE duration: the time a fruit
+  // spends entirely inside the playfield (bottom edge above the board's
+  // bottom on the way up until its top edge passes below it on the way
+  // down). _spawnFruit converts it into launch velocity and gravity from
+  // the actual playfield geometry, so the readable window is the same on
+  // tall desktop boards and short phone boards.
+  FLIGHT_SECONDS: 5.5,          // target fully-visible seconds per fruit (base; levels scale it)
+  FLIGHT_JITTER_RATIO: 0.04,    // ± fraction of FLIGHT_SECONDS (variety, band-safe)
   APEX_TARGET_RATIO: 0.26,      // apex at this fraction of playfield height
   APEX_JITTER_RATIO: 0.05,      // ± fraction of playfield height
   EXIT_MARGIN_RATIO: 0.05,      // extra depth below the board before exit resolves
@@ -530,8 +536,22 @@ export class WordSliceEngine {
       radius * 1.35,
       this.playH * 0.55
     );
-    const flight = t.FLIGHT_SECONDS * (1 + (this.rng() * 2 - 1) * t.FLIGHT_JITTER_RATIO);
+    // Convert the target fully-visible duration into total flight time.
+    // The ballistic arc below crosses any line `d` px above the launch pad
+    // at t = (T/2)·(1 ∓ √(1 − d/rise)), so the fully-visible window (fruit
+    // entirely inside the board, y between playH − radius and playH + radius)
+    // lasts T·k with k = (√(1 − dOut/rise) + √(1 − dIn/rise)) / 2. Solving
+    // T = target/k keeps the readable window equal to FLIGHT_SECONDS on
+    // every playfield height instead of shrinking with the off-screen
+    // launch/exit portions of the arc. The depth clamps only guard the
+    // degenerate tiny-playfield case where the fruit would never fully
+    // enter the board before its apex.
     const rise = Math.max(1, y0 - apex);
+    const dOut = Math.min(y0 - this.playH - radius, rise * 0.9);
+    const dIn = Math.min(y0 - this.playH + radius, rise * 0.95);
+    const kRatio = (Math.sqrt(1 - dOut / rise) + Math.sqrt(1 - dIn / rise)) / 2;
+    const target = t.FLIGHT_SECONDS * (1 + (this.rng() * 2 - 1) * t.FLIGHT_JITTER_RATIO);
+    const flight = target / clamp(kRatio, 0.5, 1);
     const id = `f${++this._ids.fruit}`;
     const fruit = {
       id,

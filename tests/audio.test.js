@@ -902,6 +902,53 @@ describe('gameplay audio wiring', () => {
   });
 });
 
+describe('seamless audio activation (no tap-for-sound button)', () => {
+  const gameSource = readFileSync(join(ROOT, 'js/game.js'), 'utf8');
+  const htmlSource = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  const cssSource = readFileSync(join(ROOT, 'css/game.css'), 'utf8');
+
+  test('the tap-for-sound button is gone from markup, styles and wiring', () => {
+    assert.ok(!htmlSource.includes('btn-audio-hint'), 'no audio-hint button in the DOM');
+    assert.ok(!htmlSource.includes('Tap for sound'), 'no tap-for-sound label');
+    assert.ok(!cssSource.includes('audio-hint'), 'no leftover audio-hint styles or keyframes');
+    assert.ok(!gameSource.includes('btnAudioHint'), 'no hint element handle in game.js');
+    assert.ok(!gameSource.includes('syncAudioHint'), 'no hint visibility logic in game.js');
+  });
+
+  test('audio bootstraps at startup without any dedicated enable control', () => {
+    // The manager (context + essential decode + saved settings) starts at
+    // initAudio time; activation rides on existing gameplay gestures only.
+    const initAudio = gameSource.match(/function initAudio\(\) \{[\s\S]{0,900}/);
+    assert.ok(initAudio, 'initAudio exists');
+    assert.ok(initAudio[0].includes('audioManager.warmup()'), 'warm-up runs at startup');
+    assert.ok(!initAudio[0].includes('addEventListener(\'click\''), 'no dedicated sound-enable click listener');
+  });
+
+  test('activation listeners remove themselves once playback is running', () => {
+    // Every armed gesture listener must have a matching teardown, and the
+    // arm/disarm decision must follow the readiness model so the listeners
+    // re-arm after an OS-level suspension (iOS tab switch) instead of
+    // firing forever once audio runs.
+    assert.ok(gameSource.includes('needsUnlock()'), 'arming follows the readiness model');
+    for (const type of ['pointerdown', 'touchend', 'keydown']) {
+      assert.ok(
+        gameSource.includes(`window.removeEventListener('${type}', tryUnlockFromGesture`),
+        `${type} activation listener is removed after unlock`,
+      );
+    }
+  });
+
+  test('a blocked context stays silent — no button, no modal, no retry loop', async () => {
+    // The manager contract: with playback blocked, play() is a no-op, no
+    // error is thrown and the next unlock attempt (the next gameplay
+    // gesture) is still accepted. The UI layer adds nothing on top.
+    const manager = createAudioManager(baseDeps());
+    assert.equal(manager.play('fruitCut'), false, 'blocked playback is a silent no-op');
+    assert.equal(manager.needsUnlock(), true, 'still needs a gesture');
+    assert.equal(manager.isSupported(), true, 'not an error state — just waiting');
+  });
+});
+
 /* ------------------------------------------------------------------ */
 /* Repeated blade swipes (the plays-only-once fix)                     */
 /* ------------------------------------------------------------------ */

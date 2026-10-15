@@ -252,7 +252,7 @@ describe('missed-fruit fairness', () => {
       for (let t = 0; t < seconds; t += STEP) engine.update(STEP);
     };
     run(1.5); // fruits are visible by now
-    const distractor = [...engine.getOptionOutcomes().entries()].find(
+    const distractor = Object.entries(engine.getOptionOutcomes()).find(
       ([id, st]) => st === FRUIT_STATES.ACTIVE && engine.round.correctIds.has(id) === false
     );
     assert.ok(distractor, 'an active distractor exists');
@@ -312,14 +312,21 @@ describe('pause, resume and frame-rate independence', () => {
     };
     const fast = run(Array(102).fill(1 / 60)); // 1.7 s at 60 fps
     const slow = run(Array(17).fill(1 / 10)); // 1.7 s at 10 fps
-    const chunky = run(Array(7).fill(1 / 4)); // clamped stalled frames
     assert.equal(Object.keys(fast).length, 4);
     for (const id of Object.keys(fast)) {
-      assert.ok(slow[id] && chunky[id], `fruit ${id} present in all frame patterns`);
+      assert.ok(slow[id], `fruit ${id} present in all frame patterns`);
+      // 10 fps slices the same fixed steps (6 per frame): same motion.
       assert.ok(Math.abs(fast[id].x - slow[id].x) < 0.2, `x 10fps drift ${Math.abs(fast[id].x - slow[id].x)}`);
       assert.ok(Math.abs(fast[id].y - slow[id].y) < 0.2, `y 10fps drift ${Math.abs(fast[id].y - slow[id].y)}`);
-      assert.ok(Math.abs(fast[id].x - chunky[id].x) < 0.2, `x 4fps drift ${Math.abs(fast[id].x - chunky[id].x)}`);
-      assert.ok(Math.abs(fast[id].y - chunky[id].y) < 0.2, `y 4fps drift ${Math.abs(fast[id].y - chunky[id].y)}`);
+    }
+    // Stalled 4 fps frames (clamped to MAX_FRAME_DELTA) must not run the
+    // simulation ahead either: 6 × 0.25 s is the same 1.5 s as 90 × 1/60 s.
+    const fast15 = run(Array(90).fill(1 / 60));
+    const chunky = run(Array(6).fill(1 / 4));
+    for (const id of Object.keys(fast15)) {
+      assert.ok(chunky[id], `fruit ${id} present in the stalled pattern`);
+      assert.ok(Math.abs(fast15[id].x - chunky[id].x) < 0.2, `x 4fps drift ${Math.abs(fast15[id].x - chunky[id].x)}`);
+      assert.ok(Math.abs(fast15[id].y - chunky[id].y) < 0.2, `y 4fps drift ${Math.abs(fast15[id].y - chunky[id].y)}`);
     }
   });
 });
@@ -451,14 +458,27 @@ describe('collision and scoring integrity at the new speeds', () => {
 
   it('slicing remains possible across the whole visible window (no dead zones)', () => {
     const engine = makeEngine({ playW: 1280, playH: 540, maxActive: 4, tuning: tuningOverridesFor('level-12') });
-    // Slice late — near the end of the visible window the fruit must still
-    // be reachable below the apex and above the board bottom.
-    for (let t = 0; t < 4.9; t += STEP) engine.update(STEP);
-    const fruits = engine.getFruitsSnapshot();
-    assert.ok(fruits.length > 0, 'fruits still in flight late in the window');
-    const f = fruits[0];
-    assert.ok(f.y + f.radius < 540, 'fruit fully inside the board');
-    const results = engine.slice(f.x - 2, f.y - 2, f.x + 2, f.y + 2);
+    // Wait for the first fruit to be fully inside, then advance to the last
+    // half-second of its readable window and slice: it must still connect.
+    const playH = 540;
+    let fullyInAt = null;
+    let watched = null;
+    for (let t = 0; t < 5; t += STEP) {
+      engine.update(STEP);
+      const f = engine.getFruitsSnapshot()[0];
+      if (f) {
+        if (!watched) watched = f.id;
+        if (fullyInAt === null && f.id === watched && f.y + f.radius <= playH) fullyInAt = t;
+        if (fullyInAt !== null) break;
+      }
+    }
+    assert.ok(fullyInAt !== null, 'fruit entered the board');
+    const windowS = tuningOverridesFor('level-12').FLIGHT_SECONDS;
+    for (let t = 0; t < windowS - 0.5; t += STEP) engine.update(STEP); // late, still visible
+    const late = engine.getFruitsSnapshot().find((f) => f.id === watched);
+    assert.ok(late, 'fruit still in flight late in the window');
+    assert.ok(late.y + late.radius < playH, 'fruit still fully inside the board');
+    const results = engine.slice(late.x - 2, late.y - 2, late.x + 2, late.y + 2);
     assert.equal(results.length, 1, 'late slice still connects');
   });
 });

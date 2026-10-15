@@ -694,7 +694,7 @@ describe('LIFECYCLE timing robustness', () => {
   }
 
   it('equivalent frame partitions produce equivalent motion', () => {
-    const target = 1.7; // apex of the first fruit (FLIGHT 3.4 / 2)
+    const target = 1.7; // first fruit still rising (apex is near half of total flight)
     const p60 = engineAt(Array(102).fill(1 / 60)); // 1.7s at 60fps
     const p30 = engineAt(Array(51).fill(1 / 30)); // 1.7s at 30fps
     const p120 = engineAt(Array(204).fill(1 / 120)); // 1.7s at 120fps

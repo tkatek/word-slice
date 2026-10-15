@@ -14,7 +14,8 @@
  *   gesture handler (registered in game.js). Nothing is awaited before it.
  * - A context the browser itself puts into 'running' (autoplay granted)
  *   is accepted without a gesture; blocked playback is reported honestly
- *   through the readiness model so the UI can offer a tap-to-enable pill.
+ *   through the readiness model so the browser layer can arm or disarm
+ *   its gesture-unlock listeners (no button, no modal, no extra action).
  * - A bounded first-event handoff (≤ HANDOFF_WINDOW_MS) lets the very
  *   first cut/throw after activation survive a decode that is still in
  *   flight; anything older or later is dropped, never replayed.
@@ -560,7 +561,7 @@ export function createAudioManager(deps = {}) {
     return false;
   }
 
-  /** Cheap check for the always-armed gesture listeners in game.js. */
+  /** Cheap check for the gesture-arm/disarm logic in game.js. */
   function needsUnlock() {
     return supported && !unlocked;
   }
@@ -717,8 +718,9 @@ export function createAudioManager(deps = {}) {
     if (ctx.state !== 'running') {
       // The OS/browser suspended a previously running context (iOS tab
       // switch, screen lock). Sounds scheduled now would be silently lost
-      // down an inactive output, so mark the relock; the always-armed
-      // gesture listeners in game.js re-resume on the next interaction.
+      // down an inactive output, so mark the relock; the gesture listeners
+      // in game.js re-arm through the readiness model and re-resume on the
+      // next interaction.
       markRelocked(`play:${ctx.state}`);
       stats.skippedLocked++;
       return false;
@@ -872,7 +874,7 @@ export function createAudioManager(deps = {}) {
     settings = { ...settings, effectsOn: !muted };
     applyMasterGain();
     if (storage) writeAudioSettings(storage, settings);
-    notify(); // the tap-to-enable pill must not show for intentional mute
+    notify(); // state watchers stay in sync with intentional mute
     return !muted;
   }
 

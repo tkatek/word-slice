@@ -2730,7 +2730,7 @@ function onVisibilityChange() {
   }
   // Returning to the tab never auto-resumes; the player must click Resume.
   // The OS may have suspended a previously running AudioContext while
-  // hidden (iOS) — recheck so the armed gesture listeners + pill recover.
+  // hidden (iOS) — recheck so a relock re-arms the gesture listeners.
   if (!document.hidden) audioManager.checkContext();
 }
 
@@ -2879,32 +2879,27 @@ function syncAudioSettingsUi() {
   els.volumeValue.textContent = `${percent}%`;
 }
 
-/**
- * Shows the unobtrusive "tap for sound" pill only while the browser (not
- * the player) is blocking playback: never for intentional mute, zero
- * volume or unsupported hardware, and never after activation succeeds.
- */
-function syncAudioHint() {
-  const readiness = audioManager.getReadiness();
-  const blockedByBrowser = audioManager.needsUnlock() && readiness.supported;
-  const intentionalSilence = !readiness.effectsOn || readiness.volume <= 0;
-  els.btnAudioHint.hidden = !(blockedByBrowser && !intentionalSilence);
-}
-
 function initAudio() {
   // Debug/verification handle (stats, readiness, mute, volume — harmless
   // in production). ?audiodebug=1 adds console diagnostics.
   window.wordSliceAudio = audioManager;
   // Create the (suspended) context and fetch + decode the essential
   // sounds right now: decoding is not gated by autoplay policy, so the
-  // buffers are ready before the first slice can possibly happen.
+  // buffers are ready before the first slice can possibly happen. Browsers
+  // that permit autoplay flip the context to 'running' on their own during
+  // warm-up — sound then works with no gesture and no UI at all.
   audioManager.warmup();
 
-  // Persistent, near-free unlock listeners. They early-exit whenever
-  // playback is already permitted and stay armed after the first success
-  // so an OS-level suspension (iOS tab switch, screen lock) recovers on
-  // the next gesture. resume() runs synchronously inside the handler —
-  // no fetch, timer or await may precede it (autoplay user activation).
+  // Temporary activation listeners. While the browser blocks playback they
+  // turn the first permitted interaction (pointerdown, touchend or keydown
+  // — existing gameplay gestures, nothing extra) into an unlock: resume()
+  // runs synchronously inside the handler, so no fetch, timer or await may
+  // precede it (autoplay user activation). They never touch the playfield's
+  // own pointer handling (capture + passive), and once playback is running
+  // they remove themselves. An OS-level suspension of a running context
+  // (iOS tab switch, screen lock) relocks the manager and the state-change
+  // hook re-arms them — the next gesture resumes audio again.
+  let gestureListenersArmed = false;
   let lastUnlockAttemptAt = 0;
   const tryUnlockFromGesture = () => {
     if (!audioManager.needsUnlock()) return;
@@ -2915,22 +2910,26 @@ function initAudio() {
     lastUnlockAttemptAt = t;
     audioManager.unlock();
   };
-  window.addEventListener('pointerdown', tryUnlockFromGesture, { capture: true, passive: true });
-  // Older iOS Safari does not treat pointerdown as audio user activation.
-  window.addEventListener('touchend', tryUnlockFromGesture, { capture: true, passive: true });
-  window.addEventListener('keydown', tryUnlockFromGesture, true);
-
-  // The pill follows the readiness model (it also hides itself the moment
-  // any gesture activates audio — not only via its own click).
-  audioManager.onStateChange(syncAudioHint);
-  els.btnAudioHint.addEventListener('click', () => {
-    // The click's pointerdown already ran tryUnlockFromGesture via the
-    // window capture listener; the direct call is a belt-and-braces
-    // fallback for browsers that miss the capture phase.
-    if (audioManager.needsUnlock()) audioManager.unlock();
-    syncAudioHint();
-  });
-  syncAudioHint();
+  const armGestureListeners = () => {
+    window.addEventListener('pointerdown', tryUnlockFromGesture, { capture: true, passive: true });
+    // Older iOS Safari does not treat pointerdown as audio user activation.
+    window.addEventListener('touchend', tryUnlockFromGesture, { capture: true, passive: true });
+    window.addEventListener('keydown', tryUnlockFromGesture, true);
+  };
+  const disarmGestureListeners = () => {
+    window.removeEventListener('pointerdown', tryUnlockFromGesture, { capture: true });
+    window.removeEventListener('touchend', tryUnlockFromGesture, { capture: true });
+    window.removeEventListener('keydown', tryUnlockFromGesture, true);
+  };
+  const syncGestureListeners = () => {
+    const shouldArm = audioManager.needsUnlock();
+    if (shouldArm === gestureListenersArmed) return;
+    gestureListenersArmed = shouldArm;
+    if (shouldArm) armGestureListeners();
+    else disarmGestureListeners();
+  };
+  audioManager.onStateChange(syncGestureListeners);
+  syncGestureListeners();
 
   // Every visible button (including live-built level cards) gets a subtle
   // click; keyboard activation fires click too, so this stays accessible.
@@ -2953,7 +2952,6 @@ function initAudio() {
   els.btnSoundToggle.addEventListener('click', () => {
     audioManager.setMuted(audioManager.isEffectsOn()); // toggle
     syncAudioSettingsUi();
-    syncAudioHint(); // muting must not leave a misleading "enable sound" pill
   });
   els.rangeEffectsVolume.addEventListener('input', () => {
     audioManager.setEffectsVolume(els.rangeEffectsVolume.valueAsNumber / 100);

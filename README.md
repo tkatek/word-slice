@@ -102,6 +102,15 @@ fruit limits, wave gap, spawn stagger, flight time, apex, radii, drift, and the
 placeholder appearance list. UI-only timings (trail lifetime, animation cleanup) live at
 the top of the corresponding sections in `js/game.js`.
 
+`FLIGHT_SECONDS` is the **target fully-visible seconds per fruit** — the readable
+window while the fruit is entirely inside the playfield. `_spawnFruit` converts it
+into launch velocity and gravity from the actual playfield geometry, so reading time
+is the same on tall desktop boards and short phone boards. To change how long
+players can read flying words, tune `TUNING.FLIGHT_SECONDS` (base) or the
+`flightScale` entries in `DIFFICULTY` (`js/levels.js`) — no physics rewriting
+needed. `tests/flight-timing.test.js` locks the per-stage bands (A1 6–7 s,
+A2 5–6 s, B1 4.5–5.5 s).
+
 ## Architecture
 
 - `js/engine.js` — the authoritative gameplay state: explicit state machine
@@ -160,10 +169,13 @@ Notable behaviors:
 - Four validated question types: `category`, `grammar-identify`,
   `sentence-completion`, `word-meaning`. Correctness is always explicit via
   `correctOptionIds` — never inferred from word strings or fruit art.
-- Per-level difficulty profiles (`DIFFICULTY` in `js/levels.js`) scale flight
-  time, wave gap and spawn stagger modestly (1.30× slower at level 1 down to
-  0.92× at level 12). Fruit size never shrinks with level; mobile keeps its
-  2-fruit waves at every difficulty.
+- Per-level difficulty profiles (`DIFFICULTY` in `js/levels.js`) scale the fruit
+  reading window, wave gap and spawn stagger modestly (flight 1.22× at level 1
+  down to 0.87× at level 12 — roughly 6.4–6.7 s of readable flight per fruit in
+  Beginner A1, 5.4–5.7 s in Elementary A2, 4.8–5.2 s in Intermediate B1). Higher
+  levels are harder mainly through the English content, never through unreadable
+  fruit speed. Fruit size never shrinks with level; mobile keeps its 2-fruit
+  waves at every difficulty with the same reading time as desktop.
 - Stars come from successful rounds only: 10 → 3★, 9 → 2★, 8 → 1★, fewer or
   an unfinished session → 0. Passing a level unlocks the next; unlocked
   levels never re-lock. Results offer Next level / Play again / Level map.

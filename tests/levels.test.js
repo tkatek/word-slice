@@ -69,13 +69,22 @@ test('LEVELS: levelById finds and rejects', () => {
 });
 
 test('DIFFICULTY: every level has finite positive overrides within bounds', () => {
+  // Target fully-visible reading windows per stage (seconds). FLIGHT_SECONDS
+  // IS the readable window (the engine derives total flight from it), and the
+  // ±4% flight jitter must keep every flight inside its band.
+  const bands = { 'stage-1': [6, 7], 'stage-2': [5, 6], 'stage-3': [4.5, 5.5] };
   for (const level of LEVELS) {
     const t = tuningOverridesFor(level.id);
     for (const key of ['FLIGHT_SECONDS', 'WAVE_GAP', 'SPAWN_STAGGER']) {
       assert.ok(Number.isFinite(t[key]) && t[key] > 0, `${level.id} ${key}`);
     }
-    // Modest pacing: never faster than 0.85× or slower than 1.4× base flight.
-    assert.ok(t.FLIGHT_SECONDS <= 4.8 && t.FLIGHT_SECONDS >= 2.8, `${level.id} flight in range`);
+    // The configured window plus its full jitter spread stays in the band.
+    const [lo, hi] = bands[level.stageId];
+    const jittered = [1 - 0.04, 1 + 0.04].map((j) => t.FLIGHT_SECONDS * j);
+    assert.ok(
+      jittered[0] >= lo && jittered[1] <= hi,
+      `${level.id} visible window ${jittered[0].toFixed(2)}–${jittered[1].toFixed(2)}s outside [${lo}, ${hi}]`
+    );
   }
   // Difficulty genuinely decreases flight time from level 1 to level 12.
   const first = tuningOverridesFor('level-01').FLIGHT_SECONDS;

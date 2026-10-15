@@ -139,7 +139,6 @@ const els = {
   fxCanvas: $('fx'),
   trailCanvas: $('trail'),
   resizeNotice: $('resize-notice'),
-  btnAudioHint: $('btn-audio-hint'),
   pauseOverlay: $('pause-overlay'),
   btnResume: $('btn-resume'),
   fbProgress: $('fb-progress'),
